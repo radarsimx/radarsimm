@@ -2,7 +2,8 @@ classdef RadarSim < handle
     properties (Access = public)
         version_ = '1.0';
         bandwidth_;
-        pulse_length_;
+        pulse_period_;
+        samples_;
         baseband_;
     end
 
@@ -14,6 +15,7 @@ classdef RadarSim < handle
         sim_ptr=NaN;
 
         pulses_=0;
+        fs_;
     end
 
     methods (Access = public)
@@ -53,10 +55,10 @@ classdef RadarSim < handle
             t_ptr = libpointer("doublePtr",t);
 
             obj.pulses_ = kwargs.pulses;
-            obj.pulse_length_ = t(end)-t(1);
+            obj.pulse_period_ = t(end)-t(1);
 
             if isnan(kwargs.prp)
-                prp = obj.pulse_length_+zeros(1, obj.pulses_);
+                prp = obj.pulse_period_+zeros(1, obj.pulses_);
             elseif length(kwargs.prp)==1
                 prp = kwargs.prp+zeros(1, obj.pulses_);
             else
@@ -67,7 +69,7 @@ classdef RadarSim < handle
                 error("The length of prp must be the same of pulses.");
             end
 
-            if any(prp<obj.pulse_length_)
+            if any(prp<obj.pulse_period_)
                 error("prp can't be smaller than the pulse length.")
             end
 
@@ -173,6 +175,7 @@ classdef RadarSim < handle
         end
 
         function init_receiver(obj, fs, rf_gain, resistor, baseband_gain)
+            obj.fs_ = fs;
             obj.rx_ptr = calllib('radarsimc', 'Create_Receiver', fs, rf_gain, resistor, ...
                 baseband_gain);
         end
@@ -238,9 +241,9 @@ classdef RadarSim < handle
             if isnan(obj.radar_ptr)
                 obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_ptr, obj.rx_ptr);
             end
-            % obj.samples_ =
-            bb_real = libpointer("doublePtr",zeros(160, 256));
-            bb_imag = libpointer("doublePtr",zeros(160, 256));
+            obj.samples_ = floor(obj.pulse_period_*obj.fs);
+            bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_));
+            bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_));
 
             calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, bb_real, bb_imag);
         end

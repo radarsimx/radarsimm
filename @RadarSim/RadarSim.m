@@ -3,6 +3,7 @@ classdef RadarSim < handle
         version_ = '1.0';
         bandwidth_;
         pulse_length_;
+        baseband_;
     end
 
     properties (Access = private)
@@ -219,10 +220,29 @@ classdef RadarSim < handle
                 obj.rx_ptr);
         end
 
-        function add_target(obj)
+        function add_target(obj, location, speed, rcs, phase)
+            arguments
+                obj
+                location (1,3)
+                speed (1,3)
+                rcs
+                phase = 0
+            end
+
+            location_ptr = libpointer("singlePtr",location);
+            speed_ptr = libpointer("singlePtr",speed);
+            calllib('radarsimc', 'Add_Target', location_ptr, speed_ptr, rcs, phase/180*pi, obj.targets_ptr);
         end
 
         function run_simulator(obj)
+            if isnan(obj.radar_ptr)
+                obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_ptr, obj.rx_ptr);
+            end
+            % obj.samples_ =
+            bb_real = libpointer("doublePtr",zeros(160, 256));
+            bb_imag = libpointer("doublePtr",zeros(160, 256));
+
+            calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, bb_real, bb_imag);
         end
 
         function delete(obj)

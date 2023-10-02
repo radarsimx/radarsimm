@@ -5,15 +5,15 @@ classdef RadarSim < handle
         pulse_period_;
         samples_;
         baseband_;
+        noise_figure_;
     end
 
     properties (Access = private)
-        tx_ptr=NaN;
-        rx_ptr=NaN;
-        radar_ptr=NaN;
-        targets_ptr=NaN;
-        sim_ptr=NaN;
-
+        tx_ptr=0;
+        rx_ptr=0;
+        radar_ptr=0;
+        targets_ptr=0;
+        
         pulses_=0;
         fs_;
     end
@@ -109,7 +109,7 @@ classdef RadarSim < handle
                 kwargs.phs = []
                 kwargs.amp = []
             end
-            if isnan(obj.tx_ptr)
+            if obj.tx_ptr==0
                 error("Transmitter is not initialized.");
             end
 
@@ -147,7 +147,7 @@ classdef RadarSim < handle
             else
                 pulse_phs=kwargs.pulse_phs/180*pi;
             end
-            pulse_mod = pulse_amp * exp(1i * pulse_phs);
+            pulse_mod = pulse_amp .* exp(1i * pulse_phs);
 
             if length(pulse_mod)~= obj.pulses_
                 error("The length of pulse_phs and pulse_amp must be the same as the number of pulses.")
@@ -157,7 +157,7 @@ classdef RadarSim < handle
             pulse_mod_imag_ptr = libpointer("singlePtr",imag(pulse_mod));
 
             if ~isempty(kwargs.phs) && ~isempty(kwargs.amp)
-                mod_var = kwargs.amp * exp(1i * kwargs.phs/180*pi);
+                mod_var = kwargs.amp .* exp(1i * kwargs.phs/180*pi);
             else
                 mod_var= [];
             end
@@ -169,14 +169,15 @@ classdef RadarSim < handle
             calllib('radarsimc', 'Add_Txchannel', location_ptr, polar_ptr, ...
                 phi_ptr, phi_ptn_ptr, length(phi), ...
                 theta_ptr, theta_ptn_ptr, length(theta), antenna_gain, ...
-                mod_t_ptr, mod_var_real_ptr, mod_var_imag_ptr, length(mod_t), ...
+                mod_t_ptr, mod_var_real_ptr, mod_var_imag_ptr, length(kwargs.mod_t), ...
                 pulse_mod_real_ptr, pulse_mod_imag_ptr, kwargs.delay, 1, ...
                 obj.tx_ptr);
         end
 
-        function init_receiver(obj, fs, rf_gain, resistor, baseband_gain)
+        function init_receiver(obj, fs, noise_figure, rf_gain, load_resistor, baseband_gain)
             obj.fs_ = fs;
-            obj.rx_ptr = calllib('radarsimc', 'Create_Receiver', fs, rf_gain, resistor, ...
+            obj.noise_figure_ = noise_figure;
+            obj.rx_ptr = calllib('radarsimc', 'Create_Receiver', fs, rf_gain, load_resistor, ...
                 baseband_gain);
         end
 
@@ -190,7 +191,7 @@ classdef RadarSim < handle
                 kwargs.elevation_angle = [-90, 90]
                 kwargs.elevation_pattern = [0, 0]
             end
-            if isnan(obj.rx_ptr)
+            if obj.rx_ptr==0
                 error("Receiver is not initialized.");
             end
 
@@ -238,20 +239,40 @@ classdef RadarSim < handle
         end
 
         function run_simulator(obj)
-            if isnan(obj.radar_ptr)
-                obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_ptr, obj.rx_ptr);
-            end
-            obj.samples_ = floor(obj.pulse_period_*obj.fs);
+
+            obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_ptr, obj.rx_ptr);
+            radar_loc_ptr=libpointer("singlePtr",[0,0,0]);
+            radar_spd_ptr=libpointer("singlePtr",[0,0,0]);
+            radar_rot_ptr=libpointer("singlePtr",[0,0,0]);
+            radar_rrt_ptr=libpointer("singlePtr",[0,0,0]);
+            calllib('radarsimc', 'Set_Radar_Motion', radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr, obj.radar_ptr);
+
+            obj.samples_ = floor(obj.pulse_period_*obj.fs_);
             bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_));
             bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_));
 
             calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, bb_real, bb_imag);
+            obj.baseband_=bb_real.Value+1i*bb_imag.Value;
         end
 
         function delete(obj)
             calllib('radarsimc','Free_Targets',obj.targets_ptr);
 
-            clear obj.targets_ptr;
+            if obj.radar_ptr~=0
+                calllib('radarsimc','Free_Radar',obj.radar_ptr);
+            else
+                if obj.tx_ptr~=0
+                    calllib('radarsimc','Free_Transmitter',obj.tx_ptr);
+                end
+                if obj.rx_ptr~=0
+                    calllib('radarsimc','Free_Receiver',obj.rx_ptr);
+                end
+            end
+
+            obj.targets_ptr=0;
+            obj.radar_ptr=0;
+            obj.tx_ptr=0;
+            obj.rx_ptr=0;
 
             unloadlibrary radarsimc;
         end

@@ -6,6 +6,10 @@ classdef RadarSim < handle
         samples_;
         baseband_;
         noise_figure_;
+        radar_loc=[0,0,0];
+        radar_spd=[0,0,0];
+        radar_rot=[0,0,0];
+        radar_rrt=[0,0,0];
     end
 
     properties (Access = private)
@@ -174,9 +178,17 @@ classdef RadarSim < handle
                 obj.tx_ptr);
         end
 
-        function init_receiver(obj, fs, noise_figure, rf_gain, load_resistor, baseband_gain)
+        function init_receiver(obj, fs, rf_gain, load_resistor, baseband_gain, kwargs)
+            arguments
+                obj
+                fs
+                rf_gain
+                load_resistor
+                baseband_gain
+                kwargs.noise_figure = 0
+            end
             obj.fs_ = fs;
-            obj.noise_figure_ = noise_figure;
+            obj.noise_figure_ = kwargs.noise_figure;
             obj.rx_ptr = calllib('radarsimc', 'Create_Receiver', fs, rf_gain, load_resistor, ...
                 baseband_gain);
         end
@@ -238,21 +250,39 @@ classdef RadarSim < handle
             calllib('radarsimc', 'Add_Target', location_ptr, speed_ptr, rcs, phase/180*pi, obj.targets_ptr);
         end
 
+        function set_radar_motion(obj, location, speed, rotation, rotation_rate)
+            arguments
+                obj
+                location (1,3)
+                speed (1,3)
+                rotation (1,3)
+                rotation_rate (1,3)
+            end
+
+            obj.radar_loc = location;
+            obj.radar_spd = speed;
+            obj.radar_rot = rotation;
+            obj.radar_rrt = rotation_rate;
+        end
+
         function run_simulator(obj)
 
             obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_ptr, obj.rx_ptr);
-            radar_loc_ptr=libpointer("singlePtr",[0,0,0]);
-            radar_spd_ptr=libpointer("singlePtr",[0,0,0]);
-            radar_rot_ptr=libpointer("singlePtr",[0,0,0]);
-            radar_rrt_ptr=libpointer("singlePtr",[0,0,0]);
+            radar_loc_ptr=libpointer("singlePtr",obj.radar_loc);
+            radar_spd_ptr=libpointer("singlePtr",obj.radar_spd);
+            radar_rot_ptr=libpointer("singlePtr",obj.radar_rot/180*pi);
+            radar_rrt_ptr=libpointer("singlePtr",obj.radar_rrt/180*pi);
             calllib('radarsimc', 'Set_Radar_Motion', radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr, obj.radar_ptr);
 
+            num_tx = calllib('radarsimc', 'Get_Num_Txchannel', obj.tx_ptr);
+            num_rx = calllib('radarsimc', 'Get_Num_Rxchannel', obj.rx_ptr);
+
             obj.samples_ = floor(obj.pulse_period_*obj.fs_);
-            bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_));
-            bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_));
+            bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
+            bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
 
             calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, bb_real, bb_imag);
-            obj.baseband_=bb_real.Value+1i*bb_imag.Value;
+            obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, obj.samples_, obj.pulses_, num_tx*num_rx);
         end
 
         function delete(obj)

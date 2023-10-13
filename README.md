@@ -3,3 +3,34 @@
 <img src="./assets/radarsimm.svg" alt="logo" width="200"/>
 
 Radar Simulator for MATLAB.
+
+## Introdcution
+
+The MATLAB interface of RadarSimX, known as `RadarSimM`, utilizes the powerful backend engine called `RadarSimCpp`. This interface is designed to provide radar transceiver modeling and baseband simulation capabilities for both point targets and 3D models. It offers similar features as the `RadarSimPy` interface.
+
+## Key Features
+
+- ### Radar Modeling
+
+  - Radar transceiver modeling
+  - Arbitrary waveform
+  - Phase noise
+  - Phase/amplitude modulation
+  - Fast-time/slow-time modulation
+
+- ### Simulation
+
+  - Simulation of radar baseband data from point targets
+  - (TODO) Simulation of interference
+  - (TODO) Simulation of radar baseband data from 3D modeled objects/environment (**`#raytracing`**)
+  - (TODO) Simulation of target's RCS (**`#raytracing`**)
+  - (TODO) Simulation of LiDAR point cloud from 3D modeled objects/environment (**`#raytracing`**)
+
+## Dependence
+
+- MATLAB
+
+## Installation
+
+- Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
+- Put `@RadarSim` folder into your workpath.

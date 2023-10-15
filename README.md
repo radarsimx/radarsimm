@@ -6,7 +6,7 @@ Radar Simulator for MATLAB.
 
 ## Introdcution
 
-The MATLAB interface of RadarSimX, known as `RadarSimM`, utilizes the powerful backend engine called `RadarSimCpp`. This interface is designed to provide radar transceiver modeling and baseband simulation capabilities for both point targets and 3D models. It offers similar features as the `RadarSimPy` interface.
+The MATLAB interface of RadarSimX, known as `RadarSimM`, utilizes the powerful backend engine `RadarSimCpp`. This interface is designed to provide radar transceiver modeling and baseband simulation capabilities for both point targets and 3D models. It offers similar features as the `RadarSimPy` interface.
 
 ## Dependence
 

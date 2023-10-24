@@ -1,9 +1,12 @@
 %% FMCW Radar
-% Refer to https://radarsimx.com/2018/10/11/fmcw-radar/
+%
+% Compare to RadarSimPy example at https://radarsimx.com/2018/10/11/fmcw-radar/
+%
 
 clear;
 
-%%
+%% Create RadarSim handle
+
 rsim_obj=RadarSim;
 
 %% Transmitter
@@ -55,6 +58,7 @@ rsim_obj.add_target([95 20 0], [-50 0 0], 15, 0);
 rsim_obj.add_target([30 -5 0], [-22 0 0], 5, 0);
 
 %% Run Simulation
+
 rsim_obj.run_simulator('noise', true);
 baseband=rsim_obj.baseband_;
 timestamp=rsim_obj.timestamp_;
@@ -71,6 +75,7 @@ ylabel('Amplitude (V)');
 legend('I','Q');
 
 %% Range Profile
+
 range_profile=fft(baseband.*repmat(chebwin(160,60),1,256), [], 1);
 
 max_range = (3e8 * fs * t / bw / 2);
@@ -86,6 +91,7 @@ colormap jet;
 colorbar;
 
 %% Range-Doppler
+
 rdop = fft(range_profile.*repmat(chebwin(256,60).',160,1), [], 2);
 
 unambiguous_speed = 3e8/prp/fc/2;

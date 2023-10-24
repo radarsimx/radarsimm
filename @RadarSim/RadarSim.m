@@ -188,8 +188,17 @@ classdef RadarSim < handle
             pulse_mod_real_ptr = libpointer("singlePtr",real(pulse_mod));
             pulse_mod_imag_ptr = libpointer("singlePtr",imag(pulse_mod));
 
-            if ~isempty(kwargs.phs) && ~isempty(kwargs.amp)
+            if ~isempty(kwargs.phs) || ~isempty(kwargs.amp)
+                if isempty(kwargs.phs)
+                    kwargs.phs=0;
+                end
+
+                if isempty(kwargs.amp)
+                    kwargs.amp=1;
+                end
+
                 mod_var = kwargs.amp .* exp(1i * kwargs.phs/180*pi);
+            
             else
                 mod_var= [];
             end

@@ -53,7 +53,9 @@ classdef RadarSim < handle
 
         % Construct app
         function obj = RadarSim()
-            loadlibrary('radarsimc','radarsim.h');
+            if ~libisloaded('radarsimc')
+                loadlibrary('radarsimc','radarsim.h');
+            end
             obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
         end
 
@@ -361,7 +363,13 @@ classdef RadarSim < handle
             obj.tx_ptr=0;
             obj.rx_ptr=0;
 
-            unloadlibrary radarsimc;
+            if libisloaded('radarsimc')
+                try
+                    unloadlibrary radarsimc;
+                catch exception
+                    disp(exception.message);
+                end
+            end
         end
 
         function add_noise(obj)

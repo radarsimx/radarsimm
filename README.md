@@ -8,6 +8,10 @@ Radar Simulator for MATLAB.
 
 `RadarSimM` is the MATLAB interface of RadarSimX. It utilizes the powerful C++/CUDA backend engine `RadarSimCpp`. This interface is designed to provide radar transceiver modeling and baseband simulation capabilities for both point targets and 3D models. It offers similar features as the `RadarSimPy` interface.
 
+| RadarSimPy | RadarSimM |
+| ---------- | --------- |
+| <img src="./assets/fmcw_py.png" alt="radarsimpy" height="300"/> | <img src="./assets/fmcw_m.png" alt="radarsimpy" height="300"/> |
+
 ## Dependence
 
 - MATLAB

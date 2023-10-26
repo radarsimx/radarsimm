@@ -10,7 +10,8 @@ Radar Simulator for MATLAB.
 
 | RadarSimPy | RadarSimM |
 | ---------- | --------- |
-| <img src="./assets/fmcw_py.png" alt="radarsimpy" height="300"/> | <img src="./assets/fmcw_m.png" alt="radarsimpy" height="300"/> |
+| <img src="./assets/arbitrary_py.png" alt="radarsimpy" height="300"/> | <img src="./assets/fmcw_m.png" alt="radarsimpy" height="300"/> |
+| <img src="./assets/arbitrary_py.png" alt="radarsimpy" height="300"/> | <img src="./assets/arbitrary_m.png" alt="radarsimpy" height="300"/> |
 
 ## Dependence
 

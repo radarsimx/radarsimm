@@ -385,6 +385,8 @@ classdef RadarSim < handle
             obj.radar_ptr=0;
             obj.tx_ptr=0;
             obj.rx_ptr=0;
+
+            obj.tx_delay_ = [];
         end
 
         function delete(obj)

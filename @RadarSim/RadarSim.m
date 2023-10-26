@@ -12,7 +12,7 @@
 
 classdef RadarSim < handle
     properties (Access = public)
-        version_ = '1.1';
+        version_ = '1.2';
 
         samples_;
         pulses_;
@@ -57,10 +57,10 @@ classdef RadarSim < handle
 
         % Construct app
         function obj = RadarSim()
-            if ~libisloaded('radarsimc')
-                loadlibrary('radarsimc','radarsim.h');
+            if libisloaded('radarsimc')
+                error("ERROR! radarsimc library has already loaded into the memory.")
             end
-            % obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
+            loadlibrary('radarsimc','radarsim.h');
         end
 
         function init_transmitter(obj, f, t, kwargs)
@@ -76,7 +76,7 @@ classdef RadarSim < handle
                 kwargs.pn_power = NaN
             end
             if obj.tx_ptr~=0
-                error("Transmitter has already been initialized.");
+                error("ERROR! Transmitter has already been initialized.");
             end
 
             obj.tx_f_ = f;
@@ -92,7 +92,7 @@ classdef RadarSim < handle
             end
 
             if length(obj.tx_t_)~=length(obj.tx_f_)
-                error("f and t must have the same length.");
+                error("ERROR! f and t must have the same length.");
             end
 
             f_ptr = libpointer("doublePtr",obj.tx_f_);
@@ -110,11 +110,11 @@ classdef RadarSim < handle
             end
 
             if length(obj.prp_)<obj.pulses_
-                error("The length of prp must be the same of pulses.");
+                error("ERROR! The length of prp must be the same of pulses.");
             end
 
             if any(obj.prp_<obj.pulse_period_)
-                error("prp can't be smaller than the pulse length.")
+                error("ERROR! prp can't be smaller than the pulse length.")
             end
 
             obj.pulse_start_time_ = cumsum(obj.prp_)-obj.prp_(1);
@@ -127,7 +127,7 @@ classdef RadarSim < handle
             end
 
             if length(obj.tx_f_offset) ~= obj.pulses_
-                error("The length of f_offset must be the same as pulses.");
+                error("ERROR! The length of f_offset must be the same as pulses.");
             end
 
             f_offset_ptr = libpointer("doublePtr",obj.tx_f_offset);
@@ -159,7 +159,7 @@ classdef RadarSim < handle
                 kwargs.amp = []
             end
             if obj.tx_ptr==0
-                error("Transmitter is not initialized.");
+                error("ERROR! Transmitter is not initialized.");
             end
 
             location_ptr=libpointer("singlePtr",location);
@@ -168,7 +168,7 @@ classdef RadarSim < handle
             phi = kwargs.azimuth_angle/180*pi;
             phi_ptn = kwargs.azimuth_pattern-max(kwargs.azimuth_pattern);
             if length(phi)~=length(phi_ptn)
-                error("The length of azimuth_angle and azimuth_pattern must be the same.")
+                error("ERROR! The length of azimuth_angle and azimuth_pattern must be the same.")
             end
 
             phi_ptr = libpointer("singlePtr",phi);
@@ -177,7 +177,7 @@ classdef RadarSim < handle
             theta = flip(90-kwargs.elevation_angle)/180*pi;
             theta_ptn = flip(kwargs.elevation_pattern)-max(kwargs.elevation_pattern);
             if length(theta)~=length(theta)
-                error("The length of elevation_angle and elevation_pattern must be the same.")
+                error("ERROR! The length of elevation_angle and elevation_pattern must be the same.")
             end
 
             theta_ptr = libpointer("singlePtr",theta);
@@ -199,7 +199,7 @@ classdef RadarSim < handle
             pulse_mod = pulse_amp .* exp(1i * pulse_phs);
 
             if length(pulse_mod)~= obj.pulses_
-                error("The length of pulse_phs and pulse_amp must be the same as the number of pulses.")
+                error("ERROR! The length of pulse_phs and pulse_amp must be the same as the number of pulses.")
             end
 
             pulse_mod_real_ptr = libpointer("singlePtr",real(pulse_mod));
@@ -244,7 +244,7 @@ classdef RadarSim < handle
                 kwargs.noise_figure = 0
             end
             if obj.rx_ptr~=0
-                error("Receiver has already been initialized.");
+                error("ERROR! Receiver has already been initialized.");
             end
 
             obj.fs_ = fs;
@@ -269,7 +269,7 @@ classdef RadarSim < handle
                 kwargs.elevation_pattern = [0, 0]
             end
             if obj.rx_ptr==0
-                error("Receiver is not initialized.");
+                error("ERROR! Receiver is not initialized.");
             end
 
             location_ptr=libpointer("singlePtr",location);
@@ -278,7 +278,7 @@ classdef RadarSim < handle
             phi = kwargs.azimuth_angle/180*pi;
             phi_ptn = kwargs.azimuth_pattern-max(kwargs.azimuth_pattern);
             if length(phi)~=length(phi_ptn)
-                error("The length of azimuth_angle and azimuth_pattern must be the same.")
+                error("ERROR! The length of azimuth_angle and azimuth_pattern must be the same.")
             end
 
             phi_ptr = libpointer("singlePtr",phi);
@@ -287,7 +287,7 @@ classdef RadarSim < handle
             theta = flip(90-kwargs.elevation_angle)/180*pi;
             theta_ptn = flip(kwargs.elevation_pattern)-max(kwargs.elevation_pattern);
             if length(theta)~=length(theta)
-                error("The length of elevation_angle and elevation_pattern must be the same.")
+                error("ERROR! The length of elevation_angle and elevation_pattern must be the same.")
             end
 
             theta_ptr = libpointer("singlePtr",theta);

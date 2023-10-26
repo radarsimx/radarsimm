@@ -32,6 +32,10 @@ classdef RadarSim < handle
         radar_ptr=0;
         targets_ptr=0;
 
+        tx_f_;
+        tx_t_;
+        tx_power_;
+        tx_f_offset;
         tx_delay_=[];
 
         pulse_period_;
@@ -56,7 +60,7 @@ classdef RadarSim < handle
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
             end
-            obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
+            % obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
         end
 
         function init_transmitter(obj, f, t, kwargs)
@@ -71,24 +75,31 @@ classdef RadarSim < handle
                 kwargs.pn_f = NaN
                 kwargs.pn_power = NaN
             end
-
-            if length(f) == 1
-                f = [f, f];
+            if obj.tx_ptr~=0
+                error("Transmitter has already been initialized.");
             end
 
-            if length(t) == 1
-                t=[0, t];
+            obj.tx_f_ = f;
+            obj.tx_t_ = t;
+            obj.tx_power_ = kwargs.tx_power;
+
+            if length(obj.tx_f_) == 1
+                obj.tx_f_ = [obj.tx_f_, obj.tx_f_];
             end
 
-            if length(t)~=length(f)
+            if length(obj.tx_t_) == 1
+                obj.tx_t_=[0, obj.tx_t_];
+            end
+
+            if length(obj.tx_t_)~=length(obj.tx_f_)
                 error("f and t must have the same length.");
             end
 
-            f_ptr = libpointer("doublePtr",f);
-            t_ptr = libpointer("doublePtr",t);
+            f_ptr = libpointer("doublePtr",obj.tx_f_);
+            t_ptr = libpointer("doublePtr",obj.tx_t_);
 
             obj.pulses_ = kwargs.pulses;
-            obj.pulse_period_ = t(end)-t(1);
+            obj.pulse_period_ = obj.tx_t_(end)-obj.tx_t_(1);
 
             if isnan(kwargs.prp)
                 obj.prp_ = obj.pulse_period_+zeros(1, obj.pulses_);
@@ -110,20 +121,24 @@ classdef RadarSim < handle
             pulse_start_time_ptr = libpointer("doublePtr",obj.pulse_start_time_);
 
             if isnan(kwargs.f_offset)
-                f_offset = zeros(1, obj.pulses_);
+                obj.tx_f_offset = zeros(1, obj.pulses_);
             else
-                f_offset = kwargs.f_offset;
+                obj.tx_f_offset = kwargs.f_offset;
             end
 
-            if length(f_offset) ~= obj.pulses_
+            if length(obj.tx_f_offset) ~= obj.pulses_
                 error("The length of f_offset must be the same as pulses.");
             end
 
-            f_offset_ptr = libpointer("doublePtr",f_offset);
+            f_offset_ptr = libpointer("doublePtr",obj.tx_f_offset);
 
             frame_start_time_ptr = libpointer("doublePtr",0);
 
-            obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', f_ptr, t_ptr, length(f), f_offset_ptr, pulse_start_time_ptr, obj.pulses_, frame_start_time_ptr, 1, kwargs.tx_power);
+            obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', ...
+                f_ptr, t_ptr, length(obj.tx_f_), ...
+                f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
+                frame_start_time_ptr, 1, ...
+                obj.tx_power_);
 
         end
 
@@ -200,7 +215,7 @@ classdef RadarSim < handle
                 end
 
                 mod_var = kwargs.amp .* exp(1i * kwargs.phs/180*pi);
-            
+
             else
                 mod_var= [];
             end
@@ -228,6 +243,10 @@ classdef RadarSim < handle
                 baseband_gain
                 kwargs.noise_figure = 0
             end
+            if obj.rx_ptr~=0
+                error("Receiver has already been initialized.");
+            end
+
             obj.fs_ = fs;
             obj.noise_figure_ = kwargs.noise_figure;
             obj.rx_rf_gain_ = rf_gain;
@@ -291,6 +310,10 @@ classdef RadarSim < handle
                 phase = 0
             end
 
+            if obj.targets_ptr ==0
+                obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
+            end
+
             location_ptr = libpointer("singlePtr",location);
             speed_ptr = libpointer("singlePtr",speed);
             calllib('radarsimc', 'Add_Target', location_ptr, speed_ptr, rcs, phase/180*pi, obj.targets_ptr);
@@ -344,7 +367,7 @@ classdef RadarSim < handle
             end
         end
 
-        function delete(obj)
+        function reset(obj)
             calllib('radarsimc','Free_Targets',obj.targets_ptr);
 
             if obj.radar_ptr~=0
@@ -362,6 +385,10 @@ classdef RadarSim < handle
             obj.radar_ptr=0;
             obj.tx_ptr=0;
             obj.rx_ptr=0;
+        end
+
+        function delete(obj)
+            obj.reset();
 
             if libisloaded('radarsimc')
                 try

@@ -33,6 +33,7 @@ freq_nonlinear = [
     2.41646790e+10, 2.41656254e+10, 2.41665702e+10, 2.41675134e+10, ...
     2.41684550e+10, 2.41693949e+10, 2.41703331e+10, 2.41712698e+10, ...
     2.41722048e+10, 2.41731381e+10, 2.41740699e+10, 2.41750000e+10];
+
 t_nonlinear = linspace(0, 80e-6, 100);
 
 freq_linear = [24.125e9-50e6, 24.125e9+50e6];
@@ -50,21 +51,19 @@ legend('Non-linear chirp','Linear chirp');
 
 %% Create RadarSim handle
 
-rsim_nonlinear_obj=RadarSim;
-% rsim_linear_obj=RadarSim;
+rsim_obj=RadarSim;
 
 %% Transmitter
 
 prp = 100e-6;
 num_pulses = 1;
 
-rsim_nonlinear_obj.init_transmitter(freq_nonlinear, t_nonlinear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
-% rsim_linear_obj.init_transmitter(freq_linear, t_linear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
+rsim_obj.init_transmitter(freq_nonlinear, t_nonlinear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
+
 
 %% Transmitter channel
 
-rsim_nonlinear_obj.add_txchannel([0 0 0]);
-% rsim_linear_obj.add_txchannel([0 0 0]);
+rsim_obj.add_txchannel([0 0 0]);
 
 %% Receiver
 
@@ -73,47 +72,56 @@ noise_figure=12;
 rf_gain=20;
 resistor=500;
 bb_gain=30;
-rsim_nonlinear_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
-% rsim_linear_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
 
 %% Receiver channel
 
-rsim_nonlinear_obj.add_rxchannel([0 0 0]);
+rsim_obj.add_rxchannel([0 0 0]);
 % rsim_linear_obj.add_rxchannel([0 0 0]);
 
 %% Targets
 
-% rsim_nonlinear_obj.add_target([200 0 0], [0 0 0], 30, 0);
-rsim_nonlinear_obj.add_target([95 20 0], [-50 0 0], 25, 0);
-% rsim_nonlinear_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
+rsim_obj.add_target([200 0 0], [0 0 0], 30, 0);
+rsim_obj.add_target([95 20 0], [-50 0 0], 25, 0);
+rsim_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
 
-% rsim_linear_obj.add_target([200 0 0], [-5 0 0], 30, 0);
-% rsim_linear_obj.add_target([95 20 0], [-50 0 0], 25, 0);
-% rsim_linear_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
 
 %% Run Simulation
 
-rsim_nonlinear_obj.run_simulator('noise', false);
-% rsim_linear_obj.run_simulator('noise', true);
+rsim_obj.run_simulator('noise', true);
 
-baseband_nonlinear =rsim_nonlinear_obj.baseband_;
-timestamp_nonlinear =rsim_nonlinear_obj.timestamp_;
+baseband_nonlinear =rsim_obj.baseband_;
+timestamp_nonlinear =rsim_obj.timestamp_;
 
-% baseband_linear =rsim_linear_obj.baseband_;
-% timestamp_linear =rsim_linear_obj.timestamp_;
+%%
+rsim_obj.reset();
+rsim_obj.init_transmitter(freq_linear, t_linear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
+rsim_obj.add_txchannel([0 0 0]);
+
+rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+
+rsim_obj.add_rxchannel([0 0 0]);
+
+rsim_obj.add_target([200 0 0], [0 0 0], 30, 0);
+rsim_obj.add_target([95 20 0], [-50 0 0], 25, 0);
+rsim_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
+
+rsim_obj.run_simulator('noise', true);
+
+baseband_linear =rsim_obj.baseband_;
+timestamp_linear =rsim_obj.timestamp_;
 
 %% Range Profile
 
-% range_profile_nonlinear =fft(baseband_nonlinear.*repmat(chebwin(160,60),1,1), [], 1);
-range_profile_nonlinear =fft(baseband_nonlinear, [], 1);
-% range_profile_linear =fft(baseband_linear.*repmat(chebwin(160,60),1,1), [], 1);
+range_profile_nonlinear =fft(baseband_nonlinear.*repmat(chebwin(160,60),1,1), [], 1);
+range_profile_linear =fft(baseband_linear.*repmat(chebwin(160,60),1,1), [], 1);
 
 max_range = (3e8 * fs * 80e-6 / 100e6 / 2);
 
 figure();
-plot(linspace(0, max_range, rsim_nonlinear_obj.samples_), 20 * log10(abs(range_profile_nonlinear(:,1))));
+plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_nonlinear(:,1))));
 hold on;
-% plot(linspace(0, max_range, rsim_linear_obj.samples_), 20 * log10(abs(range_profile_linear(:,1))));
+plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_linear(:,1))));
 hold off;
 
 

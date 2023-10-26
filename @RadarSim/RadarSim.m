@@ -57,10 +57,10 @@ classdef RadarSim < handle
 
         % Construct app
         function obj = RadarSim()
-            if libisloaded('radarsimc')
-                error("ERROR! radarsimc library has already loaded into the memory.")
+            if ~libisloaded('radarsimc')
+                loadlibrary('radarsimc','radarsim.h');
+                % error("ERROR! radarsimc library has already loaded into the memory.")
             end
-            loadlibrary('radarsimc','radarsim.h');
         end
 
         function init_transmitter(obj, f, t, kwargs)
@@ -368,7 +368,9 @@ classdef RadarSim < handle
         end
 
         function reset(obj)
-            calllib('radarsimc','Free_Targets',obj.targets_ptr);
+            if obj.targets_ptr~=0
+                calllib('radarsimc','Free_Targets',obj.targets_ptr);
+            end
 
             if obj.radar_ptr~=0
                 calllib('radarsimc','Free_Radar',obj.radar_ptr);

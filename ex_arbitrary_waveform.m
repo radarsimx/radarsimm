@@ -51,70 +51,78 @@ legend('Non-linear chirp','Linear chirp');
 
 %% Create RadarSim handle
 
-rsim_obj=RadarSim;
+rsim_obj = RadarSim;
 
-%% Transmitter
+%% Transmitter Parameters
 
 prp = 100e-6;
 num_pulses = 1;
 
+%% Receiver Parameters
+
+fs = 2e6;
+noise_figure = 12;
+rf_gain = 20;
+resistor = 500;
+bb_gain = 30;
+
+
+%% Simulation of nonlinear chirps
+% Transmitter
+
 rsim_obj.init_transmitter(freq_nonlinear, t_nonlinear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
-
-
-%% Transmitter channel
-
 rsim_obj.add_txchannel([0 0 0]);
 
-%% Receiver
+% Receiver
 
-fs=2e6;
-noise_figure=12;
-rf_gain=20;
-resistor=500;
-bb_gain=30;
 rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
-
-%% Receiver channel
-
 rsim_obj.add_rxchannel([0 0 0]);
-% rsim_linear_obj.add_rxchannel([0 0 0]);
 
-%% Targets
+% Targets
 
 rsim_obj.add_target([200 0 0], [0 0 0], 30, 0);
 rsim_obj.add_target([95 20 0], [-50 0 0], 25, 0);
 rsim_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
 
-
-%% Run Simulation
+% Run Simulation
 
 rsim_obj.run_simulator('noise', true);
 
-baseband_nonlinear =rsim_obj.baseband_;
-timestamp_nonlinear =rsim_obj.timestamp_;
+baseband_nonlinear = rsim_obj.baseband_;
+timestamp_nonlinear = rsim_obj.timestamp_;
 
-%%
+%% Simulation of linear chirps
+% Reset object
+
 rsim_obj.reset();
+
+% Transmitter
+
 rsim_obj.init_transmitter(freq_linear, t_linear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
 rsim_obj.add_txchannel([0 0 0]);
 
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+% Receiver
 
+rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
 rsim_obj.add_rxchannel([0 0 0]);
+
+% Targets
 
 rsim_obj.add_target([200 0 0], [0 0 0], 30, 0);
 rsim_obj.add_target([95 20 0], [-50 0 0], 25, 0);
 rsim_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
 
+% Run Simulation
+
 rsim_obj.run_simulator('noise', true);
 
-baseband_linear =rsim_obj.baseband_;
-timestamp_linear =rsim_obj.timestamp_;
+baseband_linear = rsim_obj.baseband_;
+timestamp_linear = rsim_obj.timestamp_;
 
 %% Range Profile
 
-range_profile_nonlinear =fft(baseband_nonlinear.*repmat(chebwin(160,60),1,1), [], 1);
-range_profile_linear =fft(baseband_linear.*repmat(chebwin(160,60),1,1), [], 1);
+range_profile_nonlinear = fft(baseband_nonlinear.*repmat(chebwin(160,60),1,1), [], 1);
+range_profile_linear = fft(baseband_linear.*repmat(chebwin(160,60),1,1), [], 1);
 
 max_range = (3e8 * fs * 80e-6 / 100e6 / 2);
 
@@ -124,4 +132,7 @@ hold on;
 plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_linear(:,1))));
 hold off;
 
+xlabel('Range (m)');
+ylabel('Amplitude (dB)');
+legend('Non-linear chirp','Linear chirp');
 

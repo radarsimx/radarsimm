@@ -27,30 +27,30 @@ classdef RadarSim < handle
     end
 
     properties (Access = private)
+        % c pointers
         tx_ptr=0;
         rx_ptr=0;
         radar_ptr=0;
         targets_ptr=0;
 
+        % tx parameters
         tx_f_;
         tx_t_;
         tx_power_;
-        tx_f_offset;
+        tx_f_offset_;
         tx_delay_=[];
+        tx_p_length_;
+        tx_p_start_time_=0;
+        tx_prp_;
 
-        pulse_period_;
-
-        pulse_start_time_=0;
-
+        % rx parameters
         rx_rf_gain_=0;
         rx_noise_bandwidth_=0;
         rx_baseband_gain_=0;
         rx_load_resistor_=0;
-
-        noise_figure_;
-
-        prp_;
-        fs_;
+        rx_noise_figure_;
+        rx_fs_;        
+        
     end
 
     methods (Access = public)
@@ -99,38 +99,38 @@ classdef RadarSim < handle
             t_ptr = libpointer("doublePtr",obj.tx_t_);
 
             obj.pulses_ = kwargs.pulses;
-            obj.pulse_period_ = obj.tx_t_(end)-obj.tx_t_(1);
+            obj.tx_p_length_ = obj.tx_t_(end)-obj.tx_t_(1);
 
             if isnan(kwargs.prp)
-                obj.prp_ = obj.pulse_period_+zeros(1, obj.pulses_);
+                obj.tx_prp_ = obj.tx_p_length_+zeros(1, obj.pulses_);
             elseif length(kwargs.prp)==1
-                obj.prp_ = kwargs.prp+zeros(1, obj.pulses_);
+                obj.tx_prp_ = kwargs.prp+zeros(1, obj.pulses_);
             else
-                obj.prp_ = kwargs.prp;
+                obj.tx_prp_ = kwargs.prp;
             end
 
-            if length(obj.prp_)<obj.pulses_
+            if length(obj.tx_prp_)<obj.pulses_
                 error("ERROR! The length of prp must be the same of pulses.");
             end
 
-            if any(obj.prp_<obj.pulse_period_)
+            if any(obj.tx_prp_<obj.tx_p_length_)
                 error("ERROR! prp can't be smaller than the pulse length.")
             end
 
-            obj.pulse_start_time_ = cumsum(obj.prp_)-obj.prp_(1);
-            pulse_start_time_ptr = libpointer("doublePtr",obj.pulse_start_time_);
+            obj.tx_p_start_time_ = cumsum(obj.tx_prp_)-obj.tx_prp_(1);
+            pulse_start_time_ptr = libpointer("doublePtr",obj.tx_p_start_time_);
 
             if isnan(kwargs.f_offset)
-                obj.tx_f_offset = zeros(1, obj.pulses_);
+                obj.tx_f_offset_ = zeros(1, obj.pulses_);
             else
-                obj.tx_f_offset = kwargs.f_offset;
+                obj.tx_f_offset_ = kwargs.f_offset;
             end
 
-            if length(obj.tx_f_offset) ~= obj.pulses_
+            if length(obj.tx_f_offset_) ~= obj.pulses_
                 error("ERROR! The length of f_offset must be the same as pulses.");
             end
 
-            f_offset_ptr = libpointer("doublePtr",obj.tx_f_offset);
+            f_offset_ptr = libpointer("doublePtr",obj.tx_f_offset_);
 
             frame_start_time_ptr = libpointer("doublePtr",0);
 
@@ -247,8 +247,8 @@ classdef RadarSim < handle
                 error("ERROR! Receiver has already been initialized.");
             end
 
-            obj.fs_ = fs;
-            obj.noise_figure_ = kwargs.noise_figure;
+            obj.rx_fs_ = fs;
+            obj.rx_noise_figure_ = kwargs.noise_figure;
             obj.rx_rf_gain_ = rf_gain;
             obj.rx_baseband_gain_ = baseband_gain;
             obj.rx_load_resistor_ = load_resistor;
@@ -350,15 +350,15 @@ classdef RadarSim < handle
             num_tx = calllib('radarsimc', 'Get_Num_Txchannel', obj.tx_ptr);
             num_rx = calllib('radarsimc', 'Get_Num_Rxchannel', obj.rx_ptr);
 
-            obj.samples_ = floor(obj.pulse_period_*obj.fs_);
+            obj.samples_ = floor(obj.tx_p_length_*obj.rx_fs_);
             bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
             bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
 
             calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, bb_real, bb_imag);
             obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, obj.samples_, obj.pulses_, num_tx*num_rx);
 
-            obj.timestamp_=repmat((0:1:(obj.samples_-1)).'/obj.fs_, 1, obj.pulses_, num_tx*num_rx)+ ...
-                repmat(obj.pulse_start_time_, obj.samples_,1, num_tx*num_rx)+ ...
+            obj.timestamp_=repmat((0:1:(obj.samples_-1)).'/obj.rx_fs_, 1, obj.pulses_, num_tx*num_rx)+ ...
+                repmat(obj.tx_p_start_time_, obj.samples_,1, num_tx*num_rx)+ ...
                 permute(repmat(reshape(repmat(obj.tx_delay_, num_rx, 1), 1,[]).',1, obj.samples_, obj.pulses_), [2, 3,1]);
 
 
@@ -402,12 +402,12 @@ classdef RadarSim < handle
         end
 
         function add_noise(obj)
-            Boltzmann_const = 1.38064852e-23;
+            boltzmann_const = 1.38064852e-23;
             Ts = 290;
-            input_noise_dbm = 10 * log10(Boltzmann_const * Ts * 1000);  % dBm/Hz
+            input_noise_dbm = 10 * log10(boltzmann_const * Ts * 1000);  % dBm/Hz
             receiver_noise_dbm = (input_noise_dbm+ ...
                 obj.rx_rf_gain_+ ...
-                obj.noise_figure_+ ...
+                obj.rx_noise_figure_+ ...
                 10 * log10(obj.rx_noise_bandwidth_)+ ...
                 obj.rx_baseband_gain_);  % dBm/Hz
             receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts/sqrt(hz)

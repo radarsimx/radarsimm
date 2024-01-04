@@ -56,7 +56,7 @@ zlabel('z (m)');
 
 %% Run Simulation
 
-rsim_obj.run_simulator('noise', true);
+rsim_obj.run_simulator('noise', true, 'density', 0.2);
 baseband=rsim_obj.baseband_;
 timestamp=rsim_obj.timestamp_;
 

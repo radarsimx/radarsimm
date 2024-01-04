@@ -80,9 +80,9 @@ rsim_obj.add_rxchannel([0 0 0]);
 
 % Targets
 
-rsim_obj.add_target([200 0 0], [0 0 0], 30, 0);
-rsim_obj.add_target([95 20 0], [-50 0 0], 25, 0);
-rsim_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
+rsim_obj.add_point_target([200 0 0], [0 0 0], 30, 0);
+rsim_obj.add_point_target([95 20 0], [-50 0 0], 25, 0);
+rsim_obj.add_point_target([30 -5 0], [-22 0 0], 15, 0);
 
 % Run Simulation
 
@@ -108,9 +108,9 @@ rsim_obj.add_rxchannel([0 0 0]);
 
 % Targets
 
-rsim_obj.add_target([200 0 0], [0 0 0], 30, 0);
-rsim_obj.add_target([95 20 0], [-50 0 0], 25, 0);
-rsim_obj.add_target([30 -5 0], [-22 0 0], 15, 0);
+rsim_obj.add_point_target([200 0 0], [0 0 0], 30, 0);
+rsim_obj.add_point_target([95 20 0], [-50 0 0], 25, 0);
+rsim_obj.add_point_target([30 -5 0], [-22 0 0], 15, 0);
 
 % Run Simulation
 

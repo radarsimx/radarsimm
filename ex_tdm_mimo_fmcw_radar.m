@@ -79,9 +79,9 @@ end
 
 %% Targets
 
-rsim_obj.add_target([160, 0, 0], [0, 0, 0], 25, 0);
-rsim_obj.add_target([80, -80, 0], [0, 0, 0], 20, 0);
-rsim_obj.add_target([30, 20, 0], [0, 0, 0], 8, 0);
+rsim_obj.add_point_target([160, 0, 0], [0, 0, 0], 25, 0);
+rsim_obj.add_point_target([80, -80, 0], [0, 0, 0], 20, 0);
+rsim_obj.add_point_target([30, 20, 0], [0, 0, 0], 8, 0);
 
 %% Run Simulation
 

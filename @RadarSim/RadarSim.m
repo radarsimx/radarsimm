@@ -12,7 +12,7 @@
 
 classdef RadarSim < handle
     properties (Access = public)
-        version_ = '1.2';
+        version_ = '';
 
         samples_;
         pulses_;
@@ -59,6 +59,11 @@ classdef RadarSim < handle
         function obj = RadarSim()
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
+                version_ptr = libpointer("int32Ptr", zeros(1, 2));
+
+                calllib('radarsimc', 'Get_Version', version_ptr);
+                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
+
                 % error("ERROR! radarsimc library has already loaded into the memory.")
             end
         end
@@ -228,7 +233,7 @@ classdef RadarSim < handle
                 phi_ptr, phi_ptn_ptr, length(phi), ...
                 theta_ptr, theta_ptn_ptr, length(theta), antenna_gain, ...
                 mod_t_ptr, mod_var_real_ptr, mod_var_imag_ptr, length(kwargs.mod_t), ...
-                pulse_mod_real_ptr, pulse_mod_imag_ptr, kwargs.delay, 1, ...
+                pulse_mod_real_ptr, pulse_mod_imag_ptr, kwargs.delay, 1/180*pi, ...
                 obj.tx_ptr);
 
             obj.tx_delay_ = [obj.tx_delay_, kwargs.delay];
@@ -301,7 +306,7 @@ classdef RadarSim < handle
                 obj.rx_ptr);
         end
 
-        function add_target(obj, location, speed, rcs, phase)
+        function add_point_target(obj, location, speed, rcs, phase)
             arguments
                 obj
                 location (1,3)
@@ -316,7 +321,65 @@ classdef RadarSim < handle
 
             location_ptr = libpointer("singlePtr",location);
             speed_ptr = libpointer("singlePtr",speed);
-            calllib('radarsimc', 'Add_Target', location_ptr, speed_ptr, rcs, phase/180*pi, obj.targets_ptr);
+            calllib('radarsimc', 'Add_Point_Target', location_ptr, speed_ptr, rcs, phase/180*pi, obj.targets_ptr);
+        end
+
+        function add_mesh_target(obj, points, connectivity_list, location, speed, rotation, rotation_rate, kwargs)
+            arguments
+                obj
+                points
+                connectivity_list
+                location (1,3)
+                speed (1,3)
+                rotation (1,3)
+                rotation_rate (1,3)
+                kwargs.origin (1,3) = [0,0,0]
+                kwargs.permittivity = 'PEC'
+                kwargs.is_ground = false
+            end
+
+            if obj.targets_ptr ==0
+                obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
+            end
+
+            points_ptr = libpointer("singlePtr", points.');
+            connectivity_list_ptr = libpointer("int32Ptr", (connectivity_list.'-1));
+            [row,~] = size(connectivity_list);
+
+            origin_ptr = libpointer("singlePtr", kwargs.origin);
+            location_ptr = libpointer("singlePtr", location);
+            speed_ptr = libpointer("singlePtr", speed);
+            rotation_ptr = libpointer("singlePtr", rotation);
+            rotation_rate_ptr = libpointer("singlePtr", rotation_rate);
+
+            if strcmp(kwargs.permittivity, 'PEC')
+                ep_real = -1;
+                ep_imag = 0;
+                mu_real = 1;
+                mu_imag = 0;
+            else
+                ep_real = real(kwargs.permittivity);
+                ep_imag = imag(kwargs.permittivity);
+                mu_real = 1;
+                mu_imag = 0;
+            end
+
+            calllib('radarsimc', 'Add_Mesh_Target', ...
+                points_ptr, ...
+                connectivity_list_ptr, ...
+                row, ...
+                origin_ptr, ...
+                location_ptr, ...
+                speed_ptr, ...
+                rotation_ptr, ...
+                rotation_rate_ptr, ...
+                ep_real, ...
+                ep_imag, ...
+                mu_real, ...
+                mu_imag, ...
+                kwargs.is_ground, ...
+                obj.targets_ptr);
+
         end
 
         function set_radar_motion(obj, location, speed, rotation, rotation_rate)

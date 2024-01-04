@@ -36,8 +36,8 @@ rsim_obj.add_rxchannel([0 0 0]);
 
 %% Targets
 
-rsim_obj.add_target([30 0 0], [-10 0 0], 20, 0);
-rsim_obj.add_target([35 0 0], [35 0 0], 20, 0);
+rsim_obj.add_point_target([30 0 0], [-10 0 0], 20, 0);
+rsim_obj.add_point_target([35 0 0], [35 0 0], 20, 0);
 
 %% Run Simulation
 

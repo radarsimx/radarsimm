@@ -39,7 +39,7 @@ Check the examples files `ex_*.m`.
 - ### Simulation
 
   - Simulation of radar baseband data from point targets
+  - Simulation of radar baseband data from 3D modeled objects/environment (**`#raytracing`**)
   - (TODO) Simulation of interference
-  - (TODO) Simulation of radar baseband data from 3D modeled objects/environment (**`#raytracing`**)
   - (TODO) Simulation of target's RCS (**`#raytracing`**)
   - (TODO) Simulation of LiDAR point cloud from 3D modeled objects/environment (**`#raytracing`**)

@@ -71,17 +71,6 @@ rsim_obj.run_simulator('noise', true, 'density', 0.1);
 baseband=rsim_obj.baseband_;
 timestamp=rsim_obj.timestamp_;
 
-figure();
-plot(timestamp(:,1,1), real(baseband(:,1,1)));
-hold on;
-plot(timestamp(:,1,1), imag(baseband(:,1,1)));
-hold off;
-title('I/Q Baseband Signals');
-xlabel('Time (s)');
-ylabel('Amplitude (V)');
-
-legend('I','Q');
-
 %% Range Profile
 
 range_profile=fft(baseband.*repmat(chebwin(160,60),1,512), [], 1);

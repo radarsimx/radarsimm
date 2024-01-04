@@ -349,8 +349,8 @@ classdef RadarSim < handle
             origin_ptr = libpointer("singlePtr", kwargs.origin);
             location_ptr = libpointer("singlePtr", location);
             speed_ptr = libpointer("singlePtr", speed);
-            rotation_ptr = libpointer("singlePtr", rotation);
-            rotation_rate_ptr = libpointer("singlePtr", rotation_rate);
+            rotation_ptr = libpointer("singlePtr", rotation/180*pi);
+            rotation_rate_ptr = libpointer("singlePtr", rotation_rate/180*pi);
 
             if strcmp(kwargs.permittivity, 'PEC')
                 ep_real = -1;
@@ -393,21 +393,23 @@ classdef RadarSim < handle
 
             obj.radar_loc = location;
             obj.radar_spd = speed;
-            obj.radar_rot = rotation;
-            obj.radar_rrt = rotation_rate;
+            obj.radar_rot = rotation/180*pi;
+            obj.radar_rrt = rotation_rate/180*pi;
         end
 
         function run_simulator(obj, kwargs)
             arguments
                 obj
                 kwargs.noise=true
+                kwargs.density=1
+                kwargs.level='frame' % 'frame', 'pulse', 'sample'
             end
 
             obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_ptr, obj.rx_ptr);
             radar_loc_ptr=libpointer("singlePtr",obj.radar_loc);
             radar_spd_ptr=libpointer("singlePtr",obj.radar_spd);
-            radar_rot_ptr=libpointer("singlePtr",obj.radar_rot/180*pi);
-            radar_rrt_ptr=libpointer("singlePtr",obj.radar_rrt/180*pi);
+            radar_rot_ptr=libpointer("singlePtr",obj.radar_rot);
+            radar_rrt_ptr=libpointer("singlePtr",obj.radar_rrt);
             calllib('radarsimc', 'Set_Radar_Motion', radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr, obj.radar_ptr);
 
             num_tx = calllib('radarsimc', 'Get_Num_Txchannel', obj.tx_ptr);
@@ -417,7 +419,17 @@ classdef RadarSim < handle
             bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
             bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
 
-            calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, bb_real, bb_imag);
+            if strcmp(kwargs.level, 'frame')
+                level = 0;
+            elseif strcmp(kwargs.level, 'pulse')
+                level = 1;
+            elseif strcmp(kwargs.level, 'sample')
+                level = 2;
+            else
+                error("ERROR! Unknow level.");
+            end
+
+            calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, level, kwargs.density, bb_real, bb_imag);
             obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, obj.samples_, obj.pulses_, num_tx*num_rx);
 
             obj.timestamp_=repmat((0:1:(obj.samples_-1)).'/obj.rx_fs_, 1, obj.pulses_, num_tx*num_rx)+ ...

@@ -1,4 +1,4 @@
-%% FMCW Radar
+%% FMCW Radar with a Car
 %
 % Compare to RadarSimPy example at https://radarsimx.com/2021/05/10/fmcw-radar-with-a-car/
 %

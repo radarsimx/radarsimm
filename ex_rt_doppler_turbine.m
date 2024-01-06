@@ -1,4 +1,4 @@
-%% FMCW Radar
+%% Doppler of a Turbine
 %
 % Compare to RadarSimPy example at https://radarsimx.com/2021/05/10/doppler-of-a-turbine/
 %

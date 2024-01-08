@@ -125,21 +125,38 @@ range_profile_avg=mean(abs(range_profile), 3);
 max_range = (3e8 * fs * t / bw / 2);
 
 figure();
-plot(linspace(0, max_range, rsim_obj.samples_), 20*log10(range_profile_avg));
+plot(linspace(0, max_range, rsim_obj.samples_), 20*log10(range_profile_avg), 'LineWidth',1.5);
+xlabel('Range (m)');
+ylabel('Amplitude (dB)');
+grid on;
 
-%% Range-Doppler
+%% Imaging
 
-rdop = fft(range_profile.*repmat(chebwin(256,60).',160,1), [], 2);
+[peak, idx] = max(range_profile_avg);
+win_el = chebwin(64, 50);
+win_az = chebwin(128, 50);
 
-unambiguous_speed = 3e8/prp/fc/2;
+win_mat = repmat(win_el, 1, N_rx).*repmat(win_az.', N_tx, 1);
+
+raw_bv = squeeze(range_profile(idx, 1, :));
+
+bv = zeros(N_tx, N_rx);
+
+half_tx = (N_tx/2);
+half_rx = (N_rx/2);
+
+for t_idx=1:half_tx
+    bv(t_idx, 1:half_rx) = raw_bv(((t_idx-1)*N_rx+1):((t_idx-1)*N_rx+half_rx));
+    bv(t_idx, (half_rx+1):end) = raw_bv(((t_idx+half_tx-1)*N_rx+1):((t_idx+half_tx-1)*N_rx+half_rx));
+    
+    bv(t_idx+half_tx, 1:half_rx) = raw_bv(((t_idx-1)*N_rx+half_rx+1):((t_idx-1)*N_rx+N_rx));
+    bv(t_idx+half_tx, (half_rx+1):end) = raw_bv(((t_idx+half_tx-1)*N_rx+half_rx+1):((t_idx+half_tx-1)*N_rx+N_rx));
+end
+
+spec = 20*log10(abs(fftshift(fft2(bv.*win_mat, 512, 1024))));
 
 figure();
-surf(linspace(-unambiguous_speed, 0, num_pulses), linspace(0, max_range, rsim_obj.samples_), 20*log10(abs(rdop(:,:,1))));
+surf(flipud(spec));
 shading interp;
-title('Range Doppler');
-xlabel('Velocity (m/s)');
-ylabel('Range (m)');
-zlabel('Amplitude (dB)');
-colormap jet;
-colorbar;
-
+view(2), axis tight;
+axis equal;

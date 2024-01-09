@@ -24,7 +24,7 @@ Radar Simulator for MATLAB.
 
 ## Usage
 
-Check the examples files `ex_*.m`.
+Check the examples files `example_*.m`.
 
 ## Key Features
 

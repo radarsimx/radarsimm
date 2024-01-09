@@ -106,13 +106,14 @@ baseband=rsim_obj.baseband_;
 timestamp=rsim_obj.timestamp_;
 
 figure();
-plot(timestamp(:,1,1), real(baseband(:,1,1)));
+plot(timestamp(:,1,1), real(baseband(:,1,1)), 'LineWidth',1.5);
 hold on;
-plot(timestamp(:,1,1), imag(baseband(:,1,1)));
+plot(timestamp(:,1,1), imag(baseband(:,1,1)), 'LineWidth',1.5);
 hold off;
 title('I/Q Baseband Signals');
 xlabel('Time (s)');
 ylabel('Amplitude (V)');
+grid on;
 
 legend('I','Q');
 

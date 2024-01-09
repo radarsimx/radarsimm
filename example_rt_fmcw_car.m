@@ -1,6 +1,6 @@
-%% FMCW Radar with a Corner Reflector
+%% FMCW Radar with a Car
 %
-% Compare to RadarSimPy example at https://radarsimx.com/2021/05/10/fmcw-radar-with-a-corner-reflector/
+% Compare to RadarSimPy example at https://radarsimx.com/2021/05/10/fmcw-radar-with-a-car/
 %
 % ██████╗  █████╗ ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ███╗██╗  ██╗
 % ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗ ████║╚██╗██╔╝
@@ -22,13 +22,13 @@ t=80e-6;
 bw = abs(f(2)-f(1));
 fc = sum(f)/2;
 prp = 100e-6;
-num_pulses = 256;
+num_pulses = 512;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',25, 'prp', prp, 'pulses',num_pulses);
+rsim_obj.init_transmitter(f, t, 'tx_power',40, 'prp', prp, 'pulses',num_pulses);
 
 %% Transmitter channel
 
-rsim_obj.add_txchannel([0 0 0]);
+rsim_obj.add_txchannel([0 0 0.5]);
 
 %% Receiver
 
@@ -41,54 +41,53 @@ rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 
 %% Receiver channel
 
-rsim_obj.add_rxchannel([0 0 0]);
+rsim_obj.add_rxchannel([0 0 0.5]);
 
 %% Targets
-cr=stlread('./models/cr.stl');
+car = stlread('./models/vehicles/ford_raptor.stl');
 
-rsim_obj.add_mesh_target(cr.Points, ...
-    cr.ConnectivityList, ...
-    [50, 0, 0], ...
-    [-5, 0, 0], ...
-    [0, 0, 0], ...
+rsim_obj.add_mesh_target(car.Points, ...
+    car.ConnectivityList, ...
+    [150, 0, 0], ...
+    [-10, 0, 0], ...
+    [180, 0, 0], ...
     [0, 0, 0]);
 
+ground = stlread('./models/surface_400x400.stl');
+
+rsim_obj.add_mesh_target(ground.Points, ...
+    ground.ConnectivityList, ...
+    [0, 0, 0], ...
+    [0, 0, 0], ...
+    [0, 0, 0], ...
+    [0, 0, 0], ...
+    'permittivity',3.2+0.1i, ...
+    'is_ground', true);
+
 figure();
-trimesh(cr,'FaceColor','green','FaceAlpha', 0.6, 'EdgeColor','blue')
+trimesh(car,'FaceColor','green','FaceAlpha', 0.6, 'EdgeColor','blue')
 axis equal;
 xlabel('x (m)');
 ylabel('y (m)');
 zlabel('z (m)');
 
 %% Run Simulation
-
 tic;
-rsim_obj.run_simulator('noise', true, 'density', 0.2);
+rsim_obj.run_simulator('noise', true, 'density', 0.1);
 toc;
 
 baseband=rsim_obj.baseband_;
 timestamp=rsim_obj.timestamp_;
 
-figure();
-plot(timestamp(:,1,1), real(baseband(:,1,1)));
-hold on;
-plot(timestamp(:,1,1), imag(baseband(:,1,1)));
-hold off;
-title('I/Q Baseband Signals');
-xlabel('Time (s)');
-ylabel('Amplitude (V)');
-
-legend('I','Q');
-
 %% Range Profile
 
-range_profile=fft(baseband.*repmat(chebwin(160,60),1,256), [], 1);
+range_profile=fft(baseband.*repmat(chebwin(160,60),1,512), [], 1);
 
 max_range = (3e8 * fs * t / bw / 2);
 
 %% Range-Doppler
 
-rdop = fft(range_profile.*repmat(chebwin(256,60).',160,1), [], 2);
+rdop = fft(range_profile.*repmat(chebwin(512,60).',160,1), [], 2);
 
 unambiguous_speed = 3e8/prp/fc/2;
 
@@ -99,6 +98,7 @@ title('Range Doppler');
 xlabel('Velocity (m/s)');
 ylabel('Range (m)');
 zlabel('Amplitude (dB)');
+axis tight;
 colormap jet;
 colorbar;
 

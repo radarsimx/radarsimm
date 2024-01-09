@@ -46,10 +46,11 @@ freq_linear = [24.125e9-50e6, 24.125e9+50e6];
 t_linear = [0, 80e-6];
 
 figure();
-plot(t_nonlinear*1e6, freq_nonlinear/1e9);
+plot(t_nonlinear*1e6, freq_nonlinear/1e9, 'LineWidth',1.5);
 hold on;
-plot(t_linear*1e6, freq_linear/1e9);
+plot(t_linear*1e6, freq_linear/1e9, 'LineWidth',1.5);
 hold off;
+grid on;
 
 xlabel('Time (us)');
 ylabel('Frequency (GHz)');
@@ -133,10 +134,11 @@ range_profile_linear = fft(baseband_linear.*repmat(chebwin(160,60),1,1), [], 1);
 max_range = (3e8 * fs * 80e-6 / 100e6 / 2);
 
 figure();
-plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_nonlinear(:,1))));
+plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_nonlinear(:,1))), 'LineWidth',1.5);
 hold on;
-plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_linear(:,1))));
+plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_linear(:,1))), 'LineWidth',1.5);
 hold off;
+grid on;
 
 xlabel('Range (m)');
 ylabel('Amplitude (dB)');

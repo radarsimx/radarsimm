@@ -1,6 +1,6 @@
-%% Doppler of a Turbine
+%% FMCW Radar with a Plate
 %
-% Compare to RadarSimPy example at https://radarsimx.com/2021/05/10/doppler-of-a-turbine/
+% Compare to RadarSimPy example at https://radarsimx.com/2021/05/10/fmcw-radar-with-a-plate/
 %
 % ██████╗  █████╗ ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ███╗██╗  ██╗
 % ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗ ████║╚██╗██╔╝
@@ -17,11 +17,14 @@ rsim_obj=RadarSim;
 
 %% Transmitter
 
-f=24.125e9;
-t=20;
-num_pulses = 1;
+f=[1e9-50e6, 1e9+50e6];
+t=80e-6;
+bw = abs(f(2)-f(1));
+fc = sum(f)/2;
+prp = 0.5;
+num_pulses = 180;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',20, 'pulses',num_pulses);
+rsim_obj.init_transmitter(f, t, 'tx_power',15, 'prp', prp, 'pulses',num_pulses);
 
 %% Transmitter channel
 
@@ -29,11 +32,11 @@ rsim_obj.add_txchannel([0 0 0]);
 
 %% Receiver
 
-fs=800;
-noise_figure=4;
+fs=2e6;
+noise_figure=8;
 rf_gain=20;
-resistor=1000;
-bb_gain=50;
+resistor=500;
+bb_gain=30;
 rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
 
 %% Receiver channel
@@ -41,46 +44,54 @@ rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 rsim_obj.add_rxchannel([0 0 0]);
 
 %% Targets
-turbine = stlread('./models/turbine.stl');
+plate = stlread('./models/plate5x5.stl');
 
-rsim_obj.add_mesh_target(turbine.Points, ...
-    turbine.ConnectivityList, ...
-    [8, 0, 0], ...
+rsim_obj.add_mesh_target(plate.Points, ...
+    plate.ConnectivityList, ...
+    [200, 0, 0], ...
     [0, 0, 0], ...
     [0, 0, 0], ...
-    [0, 50, 0]);
+    [1, 0, 0]);
 
 figure();
-trimesh(turbine,'FaceColor','green','FaceAlpha', 0.6, 'EdgeColor','blue')
+trimesh(plate,'FaceColor','green','FaceAlpha', 0.6, 'EdgeColor','blue')
 axis equal;
 xlabel('x (m)');
 ylabel('y (m)');
 zlabel('z (m)');
 
 %% Run Simulation
+tic;
+rsim_obj.run_simulator('noise', false, 'density', 1, 'level','pulse');
+toc;
 
-rsim_obj.run_simulator('noise', true, 'density', 2, 'level', 'sample');
 baseband=rsim_obj.baseband_;
 timestamp=rsim_obj.timestamp_;
 
+%% Range Profile
+
+range_profile=fft(baseband.*repmat(chebwin(160,60),1,180), [], 1);
+
+max_range = (3e8 * fs * t / bw / 2);
+
 figure();
-plot(timestamp(:,1,1), real(baseband(:,1,1)));
-hold on;
-plot(timestamp(:,1,1), imag(baseband(:,1,1)));
-hold off;
-title('I/Q Baseband Signals');
-xlabel('Time (s)');
-ylabel('Amplitude (V)');
-
-legend('I','Q');
-
-%% Short-Time Fourier Transform
-
-[spec, f_axis, t_axis] = stft(squeeze(baseband(:,1,1)), fs);
-
-surf(t_axis, f_axis, 20*log10(abs(spec)));
+surf(0:(num_pulses-1), linspace(0, max_range, rsim_obj.samples_), 20*log10(abs(range_profile(:,:,1))));
 shading interp;
-view(2), axis tight;
+title('Range Profile');
+xlabel('Chirp');
+ylabel('Range (m)');
+zlabel('Amplitude (dB)');
+colormap jet;
+colorbar;
+view(2);
+axis tight;
 
-xlabel('Time (s)');
-ylabel('Doppler (Hz)');
+obs_angle = 0:0.5:89.5;
+
+figure();
+plot(obs_angle, 20*log10(abs(range_profile(134,:,1))), 'LineWidth',1.5);
+shading interp;
+xlabel('Observation angle (deg)');
+ylabel('Peak amplitude (dB)');
+grid on;
+

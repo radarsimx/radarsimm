@@ -43,6 +43,7 @@ classdef RadarSim < handle
         tx_p_length_;
         tx_p_start_time_=0;
         tx_prp_;
+        tx_f_start_time_=[0];
 
         % rx parameters
         rx_rf_gain_=0;
@@ -80,6 +81,7 @@ classdef RadarSim < handle
                 kwargs.f_offset = NaN
                 kwargs.pn_f = NaN
                 kwargs.pn_power = NaN
+                kwargs.frame_time = [0]
             end
             if obj.tx_ptr~=0
                 error("ERROR! Transmitter has already been initialized.");
@@ -138,12 +140,13 @@ classdef RadarSim < handle
 
             f_offset_ptr = libpointer("doublePtr",obj.tx_f_offset_);
 
-            frame_start_time_ptr = libpointer("doublePtr",0);
+            obj.tx_f_start_time_ = kwargs.frame_time;
+            frame_start_time_ptr = libpointer("doublePtr",obj.tx_f_start_time_);
 
             obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', ...
                 f_ptr, t_ptr, length(obj.tx_f_), ...
                 f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
-                frame_start_time_ptr, 1, ...
+                frame_start_time_ptr, length(obj.tx_f_start_time_), ...
                 obj.tx_power_);
 
         end
@@ -415,10 +418,11 @@ classdef RadarSim < handle
 
             num_tx = calllib('radarsimc', 'Get_Num_Txchannel', obj.tx_ptr);
             num_rx = calllib('radarsimc', 'Get_Num_Rxchannel', obj.rx_ptr);
+            num_frame = length(obj.tx_f_start_time_);
 
             obj.samples_ = floor(obj.tx_p_length_*obj.rx_fs_);
-            bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
-            bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx));
+            bb_real = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx*num_frame));
+            bb_imag = libpointer("doublePtr",zeros(obj.samples_, obj.pulses_, num_tx*num_rx*num_frame));
 
             if strcmp(kwargs.level, 'frame')
                 level = 0;
@@ -431,10 +435,10 @@ classdef RadarSim < handle
             end
 
             calllib('radarsimc','Run_Simulator',obj.radar_ptr, obj.targets_ptr, level, kwargs.density, bb_real, bb_imag);
-            obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, obj.samples_, obj.pulses_, num_tx*num_rx);
+            obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, obj.samples_, obj.pulses_, num_tx*num_rx*num_frame);
 
-            obj.timestamp_=repmat((0:1:(obj.samples_-1)).'/obj.rx_fs_, 1, obj.pulses_, num_tx*num_rx)+ ...
-                repmat(obj.tx_p_start_time_, obj.samples_,1, num_tx*num_rx)+ ...
+            obj.timestamp_=repmat((0:1:(obj.samples_-1)).'/obj.rx_fs_, 1, obj.pulses_, num_tx*num_rx*num_frame)+ ...
+                repmat(obj.tx_p_start_time_, obj.samples_,1, num_tx*num_rx*num_frame)+ ...
                 permute(repmat(reshape(repmat(obj.tx_delay_, num_rx, 1), 1,[]).',1, obj.samples_, obj.pulses_), [2, 3,1]);
 
 

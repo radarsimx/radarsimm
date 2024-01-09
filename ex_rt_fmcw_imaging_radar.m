@@ -28,7 +28,7 @@ fc = sum(f)/2;
 prp = 40e-6;
 num_pulses = 1;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',15, 'prp', prp, 'pulses',num_pulses);
+rsim_obj.init_transmitter(f, t, 'tx_power',15, 'prp', prp, 'pulses', num_pulses);
 
 %% Transmitter channel
 
@@ -148,7 +148,7 @@ half_rx = (N_rx/2);
 for t_idx=1:half_tx
     bv(t_idx, 1:half_rx) = raw_bv(((t_idx-1)*N_rx+1):((t_idx-1)*N_rx+half_rx));
     bv(t_idx, (half_rx+1):end) = raw_bv(((t_idx+half_tx-1)*N_rx+1):((t_idx+half_tx-1)*N_rx+half_rx));
-    
+
     bv(t_idx+half_tx, 1:half_rx) = raw_bv(((t_idx-1)*N_rx+half_rx+1):((t_idx-1)*N_rx+N_rx));
     bv(t_idx+half_tx, (half_rx+1):end) = raw_bv(((t_idx+half_tx-1)*N_rx+half_rx+1):((t_idx+half_tx-1)*N_rx+N_rx));
 end

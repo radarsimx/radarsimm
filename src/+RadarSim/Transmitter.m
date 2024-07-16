@@ -11,11 +11,7 @@ classdef Transmitter < handle
         f_offset_;
         frame_start_time_;
         tx_ptr = 0;
-    end
-
-    properties (Access = private) 
-        tx_delay_=[];
-
+        delay_=[];
     end
 
     methods (Access = public)
@@ -150,7 +146,7 @@ classdef Transmitter < handle
                 pulse_mod_real_ptr, pulse_mod_imag_ptr, tx_ch.delay_, 1/180*pi, ...
                 obj.tx_ptr);
 
-            obj.tx_delay_ = [obj.tx_delay_, tx_ch.delay_];
+            obj.delay_ = [obj.delay_, tx_ch.delay_];
         end
 
         function delete(obj)

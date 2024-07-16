@@ -11,11 +11,9 @@
 
 clear;
 
+%% Add path of the module
+
 addpath("../src");
-
-%% Create RadarSim handle
-
-% rsim_obj=RadarSim;
 
 %% Transmitter channel
 
@@ -48,14 +46,18 @@ radar = RadarSim.Radar(tx, rx);
 
 %% Targets
 
-rsim_obj.add_point_target([30 0 0], [-10 0 0], 20, 0);
-rsim_obj.add_point_target([35 0 0], [35 0 0], 20, 0);
+targets={};
+targets{1} = RadarSim.PointTarget([30 0 0], [-10 0 0], 20, 'phase', 0);
+targets{2} = RadarSim.PointTarget([35 0 0], [35 0 0], 20, 'phase', 0);
 
 %% Run Simulation
 
-rsim_obj.run_simulator('noise', true);
-baseband=rsim_obj.baseband_;
-timestamp=rsim_obj.timestamp_;
+simc = RadarSim.Simulator();
+
+simc.Run(radar, targets, 'noise', true);
+
+baseband=simc.baseband_;
+timestamp=simc.timestamp_;
 
 figure();
 plot(timestamp(:,1,1), real(baseband(:,1,1)), 'LineWidth',1.5);
@@ -73,7 +75,7 @@ legend('I','Q');
 
 spec = fftshift(fft(baseband(:, 1, 1)));
 
-speed = linspace(-fs/2, fs/2, rsim_obj.samples_)*3e8/2/10e9;
+speed = linspace(-fs/2, fs/2, radar.samples_per_pulse_)*3e8/2/10e9;
 
 figure();
 plot(speed, 20*log10(abs(spec)), 'LineWidth',1.5);

@@ -11,6 +11,10 @@
 
 clear;
 
+%% Add path of the module
+
+addpath("../src");
+
 %% Non-linear Chirp vs. Linear Chirp
 
 freq_nonlinear = [
@@ -56,10 +60,6 @@ xlabel('Time (us)');
 ylabel('Frequency (GHz)');
 legend('Non-linear chirp','Linear chirp');
 
-%% Create RadarSim handle
-
-rsim_obj = RadarSim;
-
 %% Transmitter Parameters
 
 prp = 100e-6;
@@ -77,54 +77,58 @@ bb_gain = 30;
 %% Simulation of nonlinear chirps
 % Transmitter
 
-rsim_obj.init_transmitter(freq_nonlinear, t_nonlinear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
-rsim_obj.add_txchannel([0 0 0]);
+tx = RadarSim.Transmitter(freq_nonlinear, t_nonlinear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses, 'channels',{RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
-rsim_obj.add_rxchannel([0 0 0]);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels',{RadarSim.RxChannel([0 0 0])});
+
+% Radar
+
+radar = RadarSim.Radar(tx, rx);
 
 % Targets
 
-rsim_obj.add_point_target([200 0 0], [0 0 0], 30, 0);
-rsim_obj.add_point_target([95 20 0], [-50 0 0], 25, 0);
-rsim_obj.add_point_target([30 -5 0], [-22 0 0], 15, 0);
+targets={};
+targets{1} = RadarSim.PointTarget([200 0 0], [0 0 0], 30);
+targets{2} = RadarSim.PointTarget([95 20 0], [-50 0 0], 25);
+targets{3} = RadarSim.PointTarget([30 -5 0], [-22 0 0], 15);
 
 % Run Simulation
 
-rsim_obj.run_simulator('noise', true);
+simc = RadarSim.Simulator();
+simc.Run(radar, targets, 'noise', true);
 
-baseband_nonlinear = rsim_obj.baseband_;
-timestamp_nonlinear = rsim_obj.timestamp_;
+baseband_nonlinear = simc.baseband_;
+timestamp_nonlinear = simc.timestamp_;
 
 %% Simulation of linear chirps
-% Reset object
-
-rsim_obj.reset();
 
 % Transmitter
 
-rsim_obj.init_transmitter(freq_linear, t_linear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses);
-rsim_obj.add_txchannel([0 0 0]);
+tx = RadarSim.Transmitter(freq_linear, t_linear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses, 'channels',{RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
-rsim_obj.add_rxchannel([0 0 0]);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels',{RadarSim.RxChannel([0 0 0])});
+
+% Radar
+
+radar = RadarSim.Radar(tx, rx);
 
 % Targets
 
-rsim_obj.add_point_target([200 0 0], [0 0 0], 30, 0);
-rsim_obj.add_point_target([95 20 0], [-50 0 0], 25, 0);
-rsim_obj.add_point_target([30 -5 0], [-22 0 0], 15, 0);
+targets={};
+targets{1} = RadarSim.PointTarget([200 0 0], [0 0 0], 30);
+targets{2} = RadarSim.PointTarget([95 20 0], [-50 0 0], 25);
+targets{3} = RadarSim.PointTarget([30 -5 0], [-22 0 0], 15);
 
 % Run Simulation
 
-rsim_obj.run_simulator('noise', true);
+simc.Run(radar, targets, 'noise', true);
 
-baseband_linear = rsim_obj.baseband_;
-timestamp_linear = rsim_obj.timestamp_;
+baseband_linear = simc.baseband_;
+timestamp_linear = simc.timestamp_;
 
 %% Range Profile
 
@@ -134,9 +138,9 @@ range_profile_linear = fft(baseband_linear.*repmat(chebwin(160,60),1,1), [], 1);
 max_range = (3e8 * fs * 80e-6 / 100e6 / 2);
 
 figure();
-plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_nonlinear(:,1))), 'LineWidth',1.5);
+plot(linspace(0, max_range, radar.samples_per_pulse_), 20 * log10(abs(range_profile_nonlinear(:,1))), 'LineWidth',1.5);
 hold on;
-plot(linspace(0, max_range, rsim_obj.samples_), 20 * log10(abs(range_profile_linear(:,1))), 'LineWidth',1.5);
+plot(linspace(0, max_range, radar.samples_per_pulse_), 20 * log10(abs(range_profile_linear(:,1))), 'LineWidth',1.5);
 hold off;
 grid on;
 

@@ -74,7 +74,16 @@ classdef Receiver < handle
                 obj.rx_ptr);
         end
 
+        function reset(obj)
+            if obj.rx_ptr~=0
+                calllib('radarsimc','Free_Receiver',obj.rx_ptr);
+            end
+            obj.rx_ptr=0;
+        end
+
         function delete(obj)
+            disp('delete rx');
+            obj.reset();
             if libisloaded('radarsimc')
                 try
                     unloadlibrary radarsimc;

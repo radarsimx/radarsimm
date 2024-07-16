@@ -1,7 +1,11 @@
 classdef Simulator < handle
     properties (Access = public)
         version_ = '';
+        baseband_;
+        timestamp_;
+        interference_;
 
+        targets_ptr=0;
     end
 
     methods (Access = public)
@@ -24,7 +28,141 @@ classdef Simulator < handle
             end
         end
 
+        function Run(obj, radar, targets, kwargs)
+            arguments
+                obj
+                radar RadarSim.Radar
+                targets
+                kwargs.noise=true
+                kwargs.density=1
+                kwargs.level='frame' % 'frame', 'pulse', 'sample'
+                kwargs.interf=NaN
+            end
+
+            obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
+            for t_idx=1:length(targets)
+                if strcmp(targets{t_idx}.type_, 'point')
+                    obj.add_point_target(targets{t_idx});
+                elseif strcmp(targets{t_idx}.type_, 'mesh')
+                    obj.add_mesh_target(targets{t_idx});
+                end
+            end
+
+            bb_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
+            bb_imag = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
+
+            if strcmp(kwargs.level, 'frame')
+                level = 0;
+            elseif strcmp(kwargs.level, 'pulse')
+                level = 1;
+            elseif strcmp(kwargs.level, 'sample')
+                level = 2;
+            else
+                error("ERROR! Unknow level.");
+            end
+
+            calllib('radarsimc','Run_Simulator',radar.radar_ptr, obj.targets_ptr, level, kwargs.density, bb_real, bb_imag);
+            obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
+
+            obj.timestamp_ = radar.timestamp_;
+
+            if kwargs.noise
+                obj.add_noise(radar);
+            end
+
+            if ~isnan(kwargs.interf)
+                interf_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
+                interf_imag = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
+                
+                calllib('radarsimc','Run_Interference',radar.radar_ptr, kwargs.interf.radar_ptr, interf_real, interf_imag);
+
+                obj.interference_=reshape(interf_real.Value+1i*interf_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
+            end
+        end
+
+        function add_point_target(obj, target)
+            arguments
+                obj
+                target RadarSim.PointTarget
+            end
+
+            location_ptr = libpointer("singlePtr",target.location_);
+            speed_ptr = libpointer("singlePtr",target.speed_);
+            calllib('radarsimc', 'Add_Point_Target', location_ptr, speed_ptr, target.rcs_, target.phase_, obj.targets_ptr);
+        end
+
+        function add_mesh_target(obj, target)
+            arguments
+                obj
+                target RadarSim.MeshTarget
+            end
+
+            points_ptr = libpointer("singlePtr", target.points_.');
+            connectivity_list_ptr = libpointer("int32Ptr", (target.connectivity_list_.'-1));
+            [row,~] = size(target.connectivity_list_);
+
+            origin_ptr = libpointer("singlePtr", target.origin_);
+            location_ptr = libpointer("singlePtr", target.location_);
+            speed_ptr = libpointer("singlePtr", target.speed_);
+            rotation_ptr = libpointer("singlePtr", target.rotation_);
+            rotation_rate_ptr = libpointer("singlePtr", target.rotation_rate_);
+
+            if strcmp(target.permittivity_, 'PEC')
+                ep_real = -1;
+                ep_imag = 0;
+                mu_real = 1;
+                mu_imag = 0;
+            else
+                ep_real = real(target.permittivity_);
+                ep_imag = imag(target.permittivity_);
+                mu_real = 1;
+                mu_imag = 0;
+            end
+
+            calllib('radarsimc', 'Add_Mesh_Target', ...
+                points_ptr, ...
+                connectivity_list_ptr, ...
+                row, ...
+                origin_ptr, ...
+                location_ptr, ...
+                speed_ptr, ...
+                rotation_ptr, ...
+                rotation_rate_ptr, ...
+                ep_real, ...
+                ep_imag, ...
+                mu_real, ...
+                mu_imag, ...
+                target.is_ground_, ...
+                obj.targets_ptr);
+
+        end
+
+        function add_noise(obj, radar)
+            boltzmann_const = 1.38064852e-23;
+            Ts = 290;
+            input_noise_dbm = 10 * log10(boltzmann_const * Ts * 1000);  % dBm/Hz
+            receiver_noise_dbm = (input_noise_dbm+ ...
+                radar.rx_.rf_gain_+ ...
+                radar.rx_.noise_figure_+ ...
+                10 * log10(radar.rx_.noise_bandwidth_)+ ...
+                radar.rx_.baseband_gain_);  % dBm/Hz
+            receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts/sqrt(hz)
+            noise_amplitude_mixer = sqrt(receiver_noise_watts * radar.rx_.load_resistor_);
+            noise_amplitude_peak = sqrt(2) * noise_amplitude_mixer;
+
+            obj.baseband_ = obj.baseband_+noise_amplitude_peak*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+
+        end
+
+        function reset(obj)
+            if obj.targets_ptr~=0
+                calllib('radarsimc','Free_Targets',obj.targets_ptr);
+            end
+            obj.targets_ptr=0;
+        end
+
         function delete(obj)
+            obj.reset();
             if libisloaded('radarsimc')
                 try
                     unloadlibrary radarsimc;
@@ -33,8 +171,5 @@ classdef Simulator < handle
                 end
             end
         end
-
-
-
     end
 end

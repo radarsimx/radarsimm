@@ -149,7 +149,18 @@ classdef Transmitter < handle
             obj.delay_ = [obj.delay_, tx_ch.delay_];
         end
 
+        function reset(obj)
+            if obj.tx_ptr~=0
+                calllib('radarsimc','Free_Transmitter',obj.tx_ptr);
+            end
+
+            obj.tx_ptr=0;
+            obj.delay_ = [];
+        end
+
         function delete(obj)
+            disp('delete tx');
+            obj.reset();
             if libisloaded('radarsimc')
                 try
                     unloadlibrary radarsimc;

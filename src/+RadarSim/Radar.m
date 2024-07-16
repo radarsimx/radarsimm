@@ -6,12 +6,9 @@ classdef Radar < handle
         num_tx_;
         num_rx_;
         num_frame_;
-        samples_;
+        samples_per_pulse_;
         timestamp_;
 
-    end
-
-    properties (Access = private)
         radar_ptr=0;
     end
 
@@ -58,15 +55,24 @@ classdef Radar < handle
             obj.num_rx_ = calllib('radarsimc', 'Get_Num_Rxchannel', obj.rx_.rx_ptr);
             obj.num_frame_ = length(obj.tx_.frame_start_time_);
 
-            obj.samples_ = floor(obj.tx_.pulse_duration_*obj.rx_.fs_);
+            obj.samples_per_pulse_ = floor(obj.tx_.pulse_duration_*obj.rx_.fs_);
 
-            obj.timestamp_=repmat((0:1:(obj.samples_-1)).'/obj.rx_.fs_, 1, obj.tx_.pulses_, obj.num_tx_*obj.num_rx_*obj.num_frame_)+ ...
-                repmat(obj.tx_.pulse_start_time_, obj.samples_,1, obj.num_tx_*obj.num_rx_*obj.num_frame_)+ ...
-                permute(repmat(reshape(repmat(obj.tx_.delay_, obj.num_rx_, 1), 1,[]).',1, obj.samples_, obj.tx_.pulses_), [2, 3,1]);
+            obj.timestamp_=repmat((0:1:(obj.samples_per_pulse_-1)).'/obj.rx_.fs_, 1, obj.tx_.pulses_, obj.num_tx_*obj.num_rx_*obj.num_frame_)+ ...
+                repmat(obj.tx_.pulse_start_time_, obj.samples_per_pulse_,1, obj.num_tx_*obj.num_rx_*obj.num_frame_)+ ...
+                permute(repmat(reshape(repmat(obj.tx_.delay_, obj.num_rx_, 1), 1,[]).',1, obj.samples_per_pulse_, obj.tx_.pulses_), [2, 3,1]);
 
         end
 
+        function reset(obj)
+            if obj.radar_ptr~=0
+                calllib('radarsimc','Free_Radar',obj.radar_ptr);
+            end
+            obj.radar_ptr=0;
+        end
+
         function delete(obj)
+            disp('delete radar');
+            obj.reset();
             if libisloaded('radarsimc')
                 try
                     unloadlibrary radarsimc;

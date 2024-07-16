@@ -9,17 +9,11 @@ classdef Transmitter < handle
         prp_;
         pulse_start_time_;
         f_offset_;
-        frame_start_time_
+        frame_start_time_;
+        tx_ptr = 0;
     end
 
-    properties (Access = private)
-        tx_ptr = 0;
-        f_ptr = 0;
-        t_ptr=0;
-        pulse_start_time_ptr=0;
-        f_offset_ptr=0;
-        frame_start_time_ptr=0;
-
+    properties (Access = private) 
         tx_delay_=[];
 
     end
@@ -70,8 +64,8 @@ classdef Transmitter < handle
                 error("ERROR! f and t must have the same length.");
             end
 
-            obj.f_ptr = libpointer("doublePtr",obj.f_);
-            obj.t_ptr = libpointer("doublePtr",obj.t_);
+            f_ptr = libpointer("doublePtr",obj.f_);
+            t_ptr = libpointer("doublePtr",obj.t_);
 
             obj.pulses_ = kwargs.pulses;
             obj.pulse_duration_ = obj.t_(end)-obj.t_(1);
@@ -93,7 +87,7 @@ classdef Transmitter < handle
             end
 
             obj.pulse_start_time_ = cumsum(obj.prp_)-obj.prp_(1);
-            obj.pulse_start_time_ptr = libpointer("doublePtr",obj.pulse_start_time_);
+            pulse_start_time_ptr = libpointer("doublePtr",obj.pulse_start_time_);
 
             if isnan(kwargs.f_offset)
                 obj.f_offset_ = zeros(1, obj.pulses_);
@@ -105,15 +99,15 @@ classdef Transmitter < handle
                 error("ERROR! The length of f_offset must be the same as pulses.");
             end
 
-            obj.f_offset_ptr = libpointer("doublePtr",obj.f_offset_);
+            f_offset_ptr = libpointer("doublePtr",obj.f_offset_);
 
             obj.frame_start_time_ = kwargs.frame_time;
-            obj.frame_start_time_ptr = libpointer("doublePtr",obj.frame_start_time_);
+            frame_start_time_ptr = libpointer("doublePtr",obj.frame_start_time_);
 
             obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', ...
-                obj.f_ptr, obj.t_ptr, length(obj.f_), ...
-                obj.f_offset_ptr, obj.pulse_start_time_ptr, obj.pulses_, ...
-                obj.frame_start_time_ptr, length(obj.frame_start_time_), ...
+                f_ptr, t_ptr, length(obj.f_), ...
+                f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
+                frame_start_time_ptr, length(obj.frame_start_time_), ...
                 obj.power_);
 
             for ch_idx=1:length(kwargs.channels)

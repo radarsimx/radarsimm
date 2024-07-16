@@ -82,13 +82,13 @@ classdef Receiver < handle
         end
 
         function delete(obj)
-            disp('delete rx');
             obj.reset();
             if libisloaded('radarsimc')
                 try
                     unloadlibrary radarsimc;
                 catch exception
-                    disp(exception.message);
+                    msg = exception.message;
+                    % disp(msg);
                 end
             end
         end

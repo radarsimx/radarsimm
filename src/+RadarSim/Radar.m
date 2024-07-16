@@ -71,13 +71,13 @@ classdef Radar < handle
         end
 
         function delete(obj)
-            disp('delete radar');
             obj.reset();
             if libisloaded('radarsimc')
                 try
                     unloadlibrary radarsimc;
                 catch exception
-                    disp(exception.message);
+                    msg = exception.message;
+                    % disp(msg);
                 end
             end
         end

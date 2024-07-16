@@ -167,7 +167,8 @@ classdef Simulator < handle
                 try
                     unloadlibrary radarsimc;
                 catch exception
-                    disp(exception.message);
+                    msg = exception.message;
+                    % disp(msg);
                 end
             end
         end

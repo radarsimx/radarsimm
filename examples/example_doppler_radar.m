@@ -11,9 +11,15 @@
 
 clear;
 
+addpath("../src");
+
 %% Create RadarSim handle
 
-rsim_obj=RadarSim;
+% rsim_obj=RadarSim;
+
+%% Transmitter channel
+
+tx_ch = RadarSim.TxChannel([0 0 0]);
 
 %% Transmitter
 
@@ -21,11 +27,11 @@ f=10e9;
 t=0.1;
 num_pulses = 1;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',10, 'pulses',num_pulses);
+tx = RadarSim.Transmitter(f, t, 'tx_power',10, 'pulses',num_pulses, 'channels',{tx_ch});
 
-%% Transmitter channel
+%% Receiver channel
 
-rsim_obj.add_txchannel([0 0 0]);
+rx_ch = RadarSim.RxChannel([0 0 0]);
 
 %% Receiver
 
@@ -34,11 +40,11 @@ noise_figure=6;
 rf_gain=20;
 resistor=1000;
 bb_gain=50;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels',{rx_ch});
 
-%% Receiver channel
+%% Radar
 
-rsim_obj.add_rxchannel([0 0 0]);
+radar = RadarSim.Radar(tx, rx);
 
 %% Targets
 

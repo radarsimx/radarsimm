@@ -1,4 +1,4 @@
 
 *.asv
-@RadarSim/radarsim.h
-@RadarSim/radarsimc.dll
+src/radarsim.h
+src/radarsimc.dll

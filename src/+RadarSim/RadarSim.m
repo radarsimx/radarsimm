@@ -32,6 +32,7 @@ classdef RadarSim < handle
         tx_ptr=0;
         rx_ptr=0;
         radar_ptr=0;
+        interf_radar_ptr=0;
         targets_ptr=0;
 
         % tx parameters
@@ -172,7 +173,8 @@ classdef RadarSim < handle
             end
 
             location_ptr=libpointer("singlePtr",location);
-            polar_ptr=libpointer("singlePtr",kwargs.polarization);
+            polar_real_ptr=libpointer("singlePtr",real(kwargs.polarization));
+            polar_imag_ptr=libpointer("singlePtr",imag(kwargs.polarization));
 
             phi = kwargs.azimuth_angle/180*pi;
             phi_ptn = kwargs.azimuth_pattern-max(kwargs.azimuth_pattern);
@@ -233,7 +235,7 @@ classdef RadarSim < handle
             mod_var_real_ptr=libpointer("singlePtr",real(mod_var));
             mod_var_imag_ptr=libpointer("singlePtr",imag(mod_var));
 
-            calllib('radarsimc', 'Add_Txchannel', location_ptr, polar_ptr, ...
+            calllib('radarsimc', 'Add_Txchannel', location_ptr, polar_real_ptr, polar_imag_ptr, ...
                 phi_ptr, phi_ptn_ptr, length(phi), ...
                 theta_ptr, theta_ptn_ptr, length(theta), antenna_gain, ...
                 mod_t_ptr, mod_var_real_ptr, mod_var_imag_ptr, length(kwargs.mod_t), ...
@@ -282,7 +284,8 @@ classdef RadarSim < handle
             end
 
             location_ptr=libpointer("singlePtr",location);
-            polar_ptr=libpointer("singlePtr",kwargs.polarization);
+            polar_real_ptr=libpointer("singlePtr",real(kwargs.polarization));
+            polar_imag_ptr=libpointer("singlePtr",imag(kwargs.polarization));
 
             phi = kwargs.azimuth_angle/180*pi;
             phi_ptn = kwargs.azimuth_pattern-max(kwargs.azimuth_pattern);
@@ -304,7 +307,7 @@ classdef RadarSim < handle
 
             antenna_gain = max(kwargs.azimuth_pattern);
 
-            calllib('radarsimc', 'Add_Rxchannel', location_ptr, polar_ptr, ...
+            calllib('radarsimc', 'Add_Rxchannel', location_ptr, polar_real_ptr, polar_imag_ptr, ...
                 phi_ptr, phi_ptn_ptr, length(phi), ...
                 theta_ptr, theta_ptn_ptr, length(theta), antenna_gain, ...
                 obj.rx_ptr);

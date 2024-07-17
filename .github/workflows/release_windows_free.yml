@@ -1,4 +1,4 @@
-name: Build Standard Library on Windows
+name: Build Freetier Library on Windows
 
 on:
   push:
@@ -19,10 +19,10 @@ jobs:
           submodules: recursive
       - name: Build RadarSimM
         run: |
-          .\build_win.bat --arch cpu --tier standard
+          .\build_win.bat --arch cpu --tier free
       - name: Archive built module
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: radarsimm_win_x86_64_cpu
-          path: .\radarsimm_win_x86_64_cpu
+          name: radarsimm_win_x86_64_cpu_free
+          path: .\radarsimm_win_x86_64_cpu_free

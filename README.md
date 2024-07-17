@@ -40,7 +40,7 @@ Check the files in `examples`.
 - ### Simulation
 
   - Simulation of radar baseband data from point targets
-  - Simulation of radar baseband data from 3D modeled objects/environment (**`#raytracing`**)
+  - Simulation of radar baseband data from 3D modeled objects/environment
   - Simulation of interference
-  - (TODO) Simulation of target's RCS (**`#raytracing`**)
-  - (TODO) Simulation of LiDAR point cloud from 3D modeled objects/environment (**`#raytracing`**)
+  - (TODO) Simulation of target's RCS
+  - (TODO) Simulation of LiDAR point cloud from 3D modeled objects/environment

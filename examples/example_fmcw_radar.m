@@ -65,8 +65,8 @@ radar = RadarSim.Radar(tx, rx);
 
 targets={};
 targets{1} = RadarSim.PointTarget([200 0 0], [-5 0 0], 20);
-% targets{2} = RadarSim.PointTarget([95 20 0], [-50 0 0], 15);
-% targets{3} = RadarSim.PointTarget([30 -5 0], [-22 0 0], 5);
+targets{2} = RadarSim.PointTarget([95 20 0], [-50 0 0], 15);
+targets{3} = RadarSim.PointTarget([30 -5 0], [-22 0 0], 5);
 
 %% Run Simulation
 

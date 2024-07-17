@@ -1,0 +1,3 @@
+[submodule "radarsimlib"]
+	path = radarsimlib
+	url = git@github.com:radarsimx/radarsimlib.git

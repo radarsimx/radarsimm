@@ -26,8 +26,8 @@ classdef TxChannel < handle
                 kwargs.azimuth_pattern = [0, 0]
                 kwargs.elevation_angle = [-90, 90]
                 kwargs.elevation_pattern = [0, 0]
-                kwargs.pulse_amp = NaN
-                kwargs.pulse_phs = NaN
+                kwargs.pulse_amp = []
+                kwargs.pulse_phs = []
                 kwargs.mod_t = []
                 kwargs.phs = []
                 kwargs.amp = []
@@ -51,11 +51,16 @@ classdef TxChannel < handle
 
             obj.antenna_gain_ = max(kwargs.azimuth_pattern);
 
-            if ~isnan(kwargs.pulse_amp) && ~isnan(kwargs.pulse_phs)
+            if ~isempty(kwargs.pulse_amp) && ~isempty(kwargs.pulse_phs)
                 pulse_amp=kwargs.pulse_amp;
                 pulse_phs=kwargs.pulse_phs/180*pi;
 
                 obj.pulse_mod_ = pulse_amp .* exp(1i * pulse_phs);
+            elseif isempty(kwargs.pulse_amp) && ~isempty(kwargs.pulse_phs)
+                pulse_phs=kwargs.pulse_phs/180*pi;
+                obj.pulse_mod_ = exp(1i * pulse_phs);
+            elseif ~isempty(kwargs.pulse_amp) && isempty(kwargs.pulse_phs)
+                obj.pulse_mod_ = kwargs.pulse_amp;
             else
                 obj.pulse_mod_=[];
             end

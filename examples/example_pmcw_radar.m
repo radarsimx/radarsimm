@@ -11,9 +11,9 @@
 
 clear;
 
-%% Create RadarSim handle
+%% Add path of the module
 
-rsim_obj=RadarSim;
+addpath("../src");
 
 %% Phase code
 
@@ -73,18 +73,19 @@ xlabel('Time (s)');
 ylabel('Phase (deg)');
 legend('Phase code 1','Phase code 2');
 
+%% Transmitter channel
+
+tx_ch = {};
+tx_ch{1} = RadarSim.TxChannel([0 0 0], 'mod_t', t_mod1, 'phs',phase_code1);
+tx_ch{2} = RadarSim.TxChannel([1 0 0], 'mod_t', t_mod2, 'phs',phase_code2);
+
 %% Transmitter
 
 f=24.125e9;
 t=2.1e-6;
 num_pulses = 256;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',20, 'pulses',num_pulses);
-
-%% Transmitter channel
-
-rsim_obj.add_txchannel([0 0 0], 'mod_t', t_mod1, 'phs',phase_code1);
-rsim_obj.add_txchannel([1 0 0], 'mod_t', t_mod2, 'phs',phase_code2);
+tx = RadarSim.Transmitter(f, t, 'tx_power',20, 'pulses',num_pulses,'channels', tx_ch);
 
 %% Receiver
 
@@ -93,23 +94,26 @@ noise_figure=10;
 rf_gain=20;
 resistor=1000;
 bb_gain=30;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', {RadarSim.RxChannel([0 0 0])});
 
-%% Receiver channel
+%% Radar
 
-rsim_obj.add_rxchannel([0 0 0]);
+radar = RadarSim.Radar(tx, rx);
 
 %% Targets
 
-rsim_obj.add_point_target([20 0 0], [-200 0 0], 10, 0);
-rsim_obj.add_point_target([70 0 0], [0 0 0], 35, 0);
-rsim_obj.add_point_target([33 10 0], [100 0 0], 20, 0);
+targets = {};
+targets{1} = RadarSim.PointTarget([20 0 0], [-200 0 0], 10);
+targets{2} = RadarSim.PointTarget([70 0 0], [0 0 0], 35);
+targets{3} = RadarSim.PointTarget([33 10 0], [100 0 0], 20);
 
 %% Run Simulation
 
-rsim_obj.run_simulator('noise', true);
-baseband=rsim_obj.baseband_;
-timestamp=rsim_obj.timestamp_;
+simc = RadarSim.Simulator();
+simc.Run(radar, targets, 'noise', true);
+
+baseband=simc.baseband_;
+timestamp=simc.timestamp_;
 
 % For convenience, the baseband signals for the two transmitter channels are
 % initially kept separate. As a result, the total size of the baseband data matrix is  

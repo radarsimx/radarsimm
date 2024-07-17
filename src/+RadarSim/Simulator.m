@@ -36,7 +36,7 @@ classdef Simulator < handle
                 kwargs.noise=true
                 kwargs.density=1
                 kwargs.level='frame' % 'frame', 'pulse', 'sample'
-                kwargs.interf=NaN
+                kwargs.interf=[]
             end
 
             obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
@@ -70,7 +70,7 @@ classdef Simulator < handle
                 obj.add_noise(radar);
             end
 
-            if ~isnan(kwargs.interf)
+            if ~isempty(kwargs.interf)
                 interf_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
                 interf_imag = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
                 
@@ -88,7 +88,16 @@ classdef Simulator < handle
 
             location_ptr = libpointer("singlePtr",target.location_);
             speed_ptr = libpointer("singlePtr",target.speed_);
-            calllib('radarsimc', 'Add_Point_Target', location_ptr, speed_ptr, target.rcs_, target.phase_, obj.targets_ptr);
+            status = calllib('radarsimc', 'Add_Point_Target', location_ptr, speed_ptr, target.rcs_, target.phase_, obj.targets_ptr);
+
+            if status
+                error("RadarSim:FreeTier", "Error: \nYou're currently using RadarSimM's FreeTier, " + ...
+                    "which imposes a restriction on the maximum number of point targets to 1. " + ...
+                    "Please consider supporting my work by upgrading to the standard version. Just choose " + ...
+                    "any amount greater than zero on https://radarsimx.com/product/radarsimm/ to access the " + ...
+                    "standard version download links. Your support will help improve the software. " + ...
+                    "Thank you for considering it.");
+            end
         end
 
         function add_mesh_target(obj, target)
@@ -119,7 +128,7 @@ classdef Simulator < handle
                 mu_imag = 0;
             end
 
-            calllib('radarsimc', 'Add_Mesh_Target', ...
+            status = calllib('radarsimc', 'Add_Mesh_Target', ...
                 points_ptr, ...
                 connectivity_list_ptr, ...
                 row, ...
@@ -134,6 +143,15 @@ classdef Simulator < handle
                 mu_imag, ...
                 target.is_ground_, ...
                 obj.targets_ptr);
+
+            if status
+                error("RadarSim:FreeTier", "Error: \nYou're currently using RadarSimM's FreeTier, " + ...
+                    "which imposes a restriction on the maximum number of mesh targets to 1 and the maximum number " + ...
+                    "of meshes to 32. Please consider supporting my work by upgrading to the standard version. " + ...
+                    "Just choose any amount greater than zero on https://radarsimx.com/product/radarsimm/ to access the " + ...
+                    "standard version download links. Your support will help improve the software. " + ...
+                    "Thank you for considering it.");
+            end
 
         end
 

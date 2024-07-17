@@ -11,9 +11,11 @@
 
 clear;
 
-%% Case 1: A corner reflector with ground surface
+%% Add path of the module
 
-rsim_obj=RadarSim;
+addpath("../src");
+
+%% Case 1: A corner reflector with ground surface
 
 % Transmitter
 
@@ -25,11 +27,7 @@ prp = 100e-6;
 num_pulses = 1;
 frame_time = 0:1:289;
 
-rsim_obj.init_transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'frame_time', frame_time);
-
-% Transmitter channel
-
-rsim_obj.add_txchannel([0 0 0]);
+tx = RadarSim.Transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'frame_time', frame_time, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
@@ -38,25 +36,26 @@ noise_figure=8;
 rf_gain=20;
 resistor=1000;
 bb_gain=80;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', {RadarSim.RxChannel([0 0 0])});
 
-% Receiver channel
+% Radar
 
-rsim_obj.add_rxchannel([0 0 0]);
+radar = RadarSim.Radar(tx, rx);
 
 % Targets
-tg1=stlread('./models/cr.stl');
+tg1=stlread('../models/cr.stl');
 
-rsim_obj.add_mesh_target(tg1.Points, ...
+targets = {};
+targets{1} = RadarSim.MeshTarget(tg1.Points, ...
     tg1.ConnectivityList, ...
     [300, 0, 0], ...
     [-1, 0, 0], ...
     [0, 0, 0], ...
     [0, 0, 0]);
 
-tg2=stlread('./models/surface_400x400.stl');
+tg2=stlread('../models/surface_400x400.stl');
 
-rsim_obj.add_mesh_target(tg2.Points, ...
+targets{2} = RadarSim.MeshTarget(tg2.Points, ...
     tg2.ConnectivityList, ...
     [0, 0, -0.5], ...
     [0, 0, 0], ...
@@ -67,12 +66,12 @@ rsim_obj.add_mesh_target(tg2.Points, ...
 
 
 % Run Simulation
-
+simc = RadarSim.Simulator();
 tic;
-rsim_obj.run_simulator('noise', false, 'density', 0.5);
+simc.Run(radar, targets, 'noise', false, 'density', 0.5);
 toc;
 
-baseband=rsim_obj.baseband_;
+baseband=simc.baseband_;
 
 % Range Profile
 
@@ -83,11 +82,7 @@ t_range = 10+(289:-1:0)*1;
 amp_multi = squeeze(max(20*log10(abs(range_profile)), [], 1));
 
 
-clear rsim_obj;
-
 %% Case 2: A corner reflector without ground surface
-
-rsim_obj=RadarSim;
 
 % Transmitter
 
@@ -99,11 +94,7 @@ prp = 100e-6;
 num_pulses = 1;
 frame_time = 0:1:289;
 
-rsim_obj.init_transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'frame_time', frame_time);
-
-% Transmitter channel
-
-rsim_obj.add_txchannel([0 0 0]);
+tx = RadarSim.Transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'frame_time', frame_time, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
@@ -112,16 +103,17 @@ noise_figure=8;
 rf_gain=20;
 resistor=1000;
 bb_gain=80;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', {RadarSim.RxChannel([0 0 0])});
 
-% Receiver channel
+% Radar
 
-rsim_obj.add_rxchannel([0 0 0]);
+radar = RadarSim.Radar(tx, rx);
 
 % Targets
-tg1=stlread('./models/cr.stl');
+tg1=stlread('../models/cr.stl');
 
-rsim_obj.add_mesh_target(tg1.Points, ...
+targets = {};
+targets{1} = RadarSim.MeshTarget(tg1.Points, ...
     tg1.ConnectivityList, ...
     [300, 0, 0], ...
     [-1, 0, 0], ...
@@ -132,10 +124,10 @@ rsim_obj.add_mesh_target(tg1.Points, ...
 % Run Simulation
 
 tic;
-rsim_obj.run_simulator('noise', false, 'density', 0.5);
+simc.Run(radar, targets, 'noise', false, 'density', 0.5);
 toc;
 
-baseband=rsim_obj.baseband_;
+baseband=simc.baseband_;
 
 % Range Profile
 

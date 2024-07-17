@@ -77,11 +77,11 @@ bb_gain = 30;
 %% Simulation of nonlinear chirps
 % Transmitter
 
-tx = RadarSim.Transmitter(freq_nonlinear, t_nonlinear, 'tx_power',60, 'prp', prp, 'pulses',num_pulses, 'channels',{RadarSim.TxChannel([0 0 0])});
+tx = RadarSim.Transmitter(freq_nonlinear, t_nonlinear, 'tx_power', 60, 'prp', prp, 'pulses',num_pulses, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
-rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels',{RadarSim.RxChannel([0 0 0])});
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', {RadarSim.RxChannel([0 0 0])});
 
 % Radar
 

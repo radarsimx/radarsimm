@@ -11,15 +11,28 @@
 
 clear;
 
-%% Create RadarSim handle
+%% Add path of the module
 
-rsim_obj=RadarSim;
+addpath("../src");
 
-%% Transmitter
-
+%% Transmitter channel
 wavelength = 3e8 / 60.5e9;
 N_tx = 64;
 N_rx = 128;
+
+tx_ch = {};
+tx_cnt = 1;
+for idx=1:N_tx/2
+    tx_ch{tx_cnt} = RadarSim.TxChannel([0, -N_rx/2*wavelength/4, wavelength*(idx-1)-(N_tx/2-1)*wavelength/2]);
+    tx_cnt = tx_cnt+1;
+end
+
+for idx=1:N_tx/2
+    tx_ch{tx_cnt} = RadarSim.TxChannel([0, wavelength*N_rx/4-N_rx/2*wavelength/4, wavelength*(idx-1)-(N_tx/2-1)*wavelength/2]);
+    tx_cnt = tx_cnt+1;
+end
+
+%% Transmitter
 
 f=[61e9, 60e9];
 t=16e-6;
@@ -28,18 +41,21 @@ fc = sum(f)/2;
 prp = 40e-6;
 num_pulses = 1;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',15, 'prp', prp, 'pulses', num_pulses);
+tx = RadarSim.Transmitter(f, t, 'tx_power',15, 'prp', prp, 'pulses', num_pulses, 'channels', tx_ch);
 
-%% Transmitter channel
+%% Receiver channel
 
-for idx=1:N_tx/2
-    rsim_obj.add_txchannel([0, -N_rx/2*wavelength/4, wavelength*(idx-1)-(N_tx/2-1)*wavelength/2]);
+rx_ch = {};
+rx_cnt = 1;
+for idx=1:N_rx/2
+    rx_ch{rx_cnt} = RadarSim.RxChannel([0, wavelength/2*(idx-1)-(N_rx/2-1)*wavelength/4, -(N_tx/2)*wavelength/2]);
+    rx_cnt = rx_cnt+1;
 end
 
-for idx=1:N_tx/2
-    rsim_obj.add_txchannel([0, wavelength*N_rx/4-N_rx/2*wavelength/4, wavelength*(idx-1)-(N_tx/2-1)*wavelength/2]);
+for idx=1:N_rx/2
+    rx_ch{rx_cnt} = RadarSim.RxChannel([0, wavelength/2*(idx-1)-(N_rx/2-1)*wavelength/4, wavelength*(N_tx/2)-(N_tx/2)*wavelength/2]);
+    rx_cnt = rx_cnt+1;
 end
-
 
 %% Receiver
 
@@ -48,41 +64,35 @@ noise_figure=8;
 rf_gain=20;
 resistor=500;
 bb_gain=30;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', rx_ch);
 
-%% Receiver channel
+%% Radar
 
-for idx=1:N_rx/2
-    rsim_obj.add_rxchannel([0, wavelength/2*(idx-1)-(N_rx/2-1)*wavelength/4, -(N_tx/2)*wavelength/2]);
-end
-
-for idx=1:N_rx/2
-    rsim_obj.add_rxchannel([0, wavelength/2*(idx-1)-(N_rx/2-1)*wavelength/4, wavelength*(N_tx/2)-(N_tx/2)*wavelength/2]);
-end
-
+radar = RadarSim.Radar(tx, rx);
 
 %% Targets
-tg1=stlread('./models/half_ring.stl');
+tg1=stlread('../models/half_ring.stl');
 
-rsim_obj.add_mesh_target(tg1.Points, ...
+targets = {};
+targets{1} = RadarSim.MeshTarget(tg1.Points, ...
     tg1.ConnectivityList, ...
     [20, 0, 0], ...
     [0, 0, 0], ...
     [0, 0, 0], ...
     [0, 0, 0]);
 
-tg2=stlread('./models/ball_1m.stl');
+tg2=stlread('../models/ball_1m.stl');
 
-rsim_obj.add_mesh_target(tg2.Points, ...
+targets{2} = RadarSim.MeshTarget(tg2.Points, ...
     tg2.ConnectivityList, ...
     [20, -1, -1], ...
     [0, 0, 0], ...
     [0, 0, 0], ...
     [0, 0, 0]);
 
-tg3=stlread('./models/ball_1m.stl');
+tg3=stlread('../models/ball_1m.stl');
 
-rsim_obj.add_mesh_target(tg3.Points, ...
+targets{3} = RadarSim.MeshTarget(tg3.Points, ...
     tg3.ConnectivityList, ...
     [20, 1, -1], ...
     [0, 0, 0], ...
@@ -98,12 +108,13 @@ rsim_obj.add_mesh_target(tg3.Points, ...
 
 %% Run Simulation
 
+simc = RadarSim.Simulator();
 tic;
-rsim_obj.run_simulator('noise', true, 'density', 0.3);
+simc.Run(radar, targets, 'noise', true, 'density', 0.3);
 toc;
 
-baseband=rsim_obj.baseband_;
-timestamp=rsim_obj.timestamp_;
+baseband=simc.baseband_;
+timestamp=simc.timestamp_;
 
 figure();
 plot(timestamp(:,1,1), real(baseband(:,1,1)), 'LineWidth',1.5);
@@ -126,7 +137,7 @@ range_profile_avg=mean(abs(range_profile), 3);
 max_range = (3e8 * fs * t / bw / 2);
 
 figure();
-plot(linspace(0, max_range, rsim_obj.samples_), 20*log10(range_profile_avg), 'LineWidth',1.5);
+plot(linspace(0, max_range, radar.samples_per_pulse_), 20*log10(range_profile_avg), 'LineWidth',1.5);
 xlabel('Range (m)');
 ylabel('Amplitude (dB)');
 grid on;

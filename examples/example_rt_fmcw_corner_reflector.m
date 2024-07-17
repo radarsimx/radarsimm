@@ -11,9 +11,9 @@
 
 clear;
 
-%% Create RadarSim handle
+%% Add path of the module
 
-rsim_obj=RadarSim;
+addpath("../src");
 
 %% Transmitter
 
@@ -24,11 +24,7 @@ fc = sum(f)/2;
 prp = 100e-6;
 num_pulses = 256;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',25, 'prp', prp, 'pulses',num_pulses);
-
-%% Transmitter channel
-
-rsim_obj.add_txchannel([0 0 0]);
+tx = RadarSim.Transmitter(f, t, 'tx_power',25, 'prp', prp, 'pulses', num_pulses, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 %% Receiver
 
@@ -37,16 +33,17 @@ noise_figure=8;
 rf_gain=20;
 resistor=500;
 bb_gain=30;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', {RadarSim.RxChannel([0 0 0])});
 
-%% Receiver channel
+%% Radar
 
-rsim_obj.add_rxchannel([0 0 0]);
+radar = RadarSim.Radar(tx, rx);
 
 %% Targets
-cr=stlread('./models/cr.stl');
+cr=stlread('../models/cr.stl');
 
-rsim_obj.add_mesh_target(cr.Points, ...
+targets = {};
+targets{1} = RadarSim.MeshTarget(cr.Points, ...
     cr.ConnectivityList, ...
     [50, 0, 0], ...
     [-5, 0, 0], ...
@@ -62,12 +59,13 @@ zlabel('z (m)');
 
 %% Run Simulation
 
+simc = RadarSim.Simulator();
 tic;
-rsim_obj.run_simulator('noise', true, 'density', 0.2);
+simc.Run(radar, targets, 'noise', true, 'density', 0.2);
 toc;
 
-baseband=rsim_obj.baseband_;
-timestamp=rsim_obj.timestamp_;
+baseband=simc.baseband_;
+timestamp=simc.timestamp_;
 
 figure();
 plot(timestamp(:,1,1), real(baseband(:,1,1)), 'LineWidth',1.5);
@@ -94,7 +92,7 @@ rdop = fft(range_profile.*repmat(chebwin(256,60).',160,1), [], 2);
 unambiguous_speed = 3e8/prp/fc/2;
 
 figure();
-surf(linspace(-unambiguous_speed, 0, num_pulses), linspace(0, max_range, rsim_obj.samples_), 20*log10(abs(rdop(:,:,1))));
+surf(linspace(-unambiguous_speed, 0, num_pulses), linspace(0, max_range, radar.samples_per_pulse_), 20*log10(abs(rdop(:,:,1))));
 shading interp;
 title('Range Doppler');
 xlabel('Velocity (m/s)');

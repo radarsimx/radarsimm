@@ -11,9 +11,9 @@
 
 clear;
 
-%% Create RadarSim handle
+%% Add path of the module
 
-rsim_obj=RadarSim;
+addpath("../src");
 
 %% Transmitter
 
@@ -21,11 +21,7 @@ f=24.125e9;
 t=20;
 num_pulses = 1;
 
-rsim_obj.init_transmitter(f, t, 'tx_power',20, 'pulses',num_pulses);
-
-%% Transmitter channel
-
-rsim_obj.add_txchannel([0 0 0]);
+tx = RadarSim.Transmitter(f, t, 'tx_power',20, 'pulses',num_pulses, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 %% Receiver
 
@@ -34,16 +30,17 @@ noise_figure=4;
 rf_gain=20;
 resistor=1000;
 bb_gain=50;
-rsim_obj.init_receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure);
+rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_figure, 'channels', {RadarSim.RxChannel([0 0 0])});
 
-%% Receiver channel
+%% Radar
 
-rsim_obj.add_rxchannel([0 0 0]);
+radar = RadarSim.Radar(tx, rx);
 
 %% Targets
-turbine = stlread('./models/turbine.stl');
+turbine = stlread('../models/turbine.stl');
 
-rsim_obj.add_mesh_target(turbine.Points, ...
+targets = {};
+targets{1} = RadarSim.MeshTarget(turbine.Points, ...
     turbine.ConnectivityList, ...
     [8, 0, 0], ...
     [0, 0, 0], ...
@@ -59,9 +56,11 @@ zlabel('z (m)');
 
 %% Run Simulation
 
-rsim_obj.run_simulator('noise', true, 'density', 2, 'level', 'sample');
-baseband=rsim_obj.baseband_;
-timestamp=rsim_obj.timestamp_;
+simc = RadarSim.Simulator();
+simc.Run(radar, targets, 'noise', true, 'density', 2, 'level', 'sample');
+
+baseband=simc.baseband_;
+timestamp=simc.timestamp_;
 
 figure();
 plot(timestamp(:,1,1), real(baseband(:,1,1)), 'LineWidth',1.5);

@@ -1,6 +1,6 @@
-%% FMCW Radar
+%% FMCW Radar Interference
 %
-% Compare to RadarSimPy example at https://radarsimx.com/2018/10/11/fmcw-radar/
+% Compare to RadarSimPy example at https://radarsimx.com/2023/01/13/interference/
 %
 % ██████╗  █████╗ ██████╗  █████╗ ██████╗ ███████╗██╗███╗   ███╗██╗  ██╗
 % ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝██║████╗ ████║╚██╗██╔╝

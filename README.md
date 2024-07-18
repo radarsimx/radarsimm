@@ -20,13 +20,10 @@ Radar Simulator for MATLAB.
 - MATLAB 64bit
 - [MinGW-w64 C/C++ compiler](https://www.mathworks.com/support/requirements/supported-compilers.html) (Windows)
 
-## Installation
+## Installation & Usage
 
 - Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
-
-## Usage
-
-Check the files in `examples`.
+- Try the files in `examples`.
 
 ## Key Features
 

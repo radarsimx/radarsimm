@@ -42,5 +42,3 @@ Radar Simulator for MATLAB.
 
 - Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
 - Try the files in `examples`.
-
-

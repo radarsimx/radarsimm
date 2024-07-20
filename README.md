@@ -15,16 +15,6 @@ Radar Simulator for MATLAB.
 | <img src="./assets/imaging_py.png" alt="radarsimpy"/> | <img src="./assets/imaging_m.png" alt="radarsimpy"/> |
 | <img src="./assets/interference_py.png" alt="radarsimpy"/> | <img src="./assets/interference_m.png" alt="radarsimpy"/> |
 
-## Dependence
-
-- MATLAB 64bit
-- [MinGW-w64 C/C++ compiler](https://www.mathworks.com/support/requirements/supported-compilers.html) (Windows)
-
-## Installation & Usage
-
-- Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
-- Try the files in `examples`.
-
 ## Key Features
 
 - ### Radar Modeling
@@ -42,3 +32,15 @@ Radar Simulator for MATLAB.
   - Simulation of interference
   - (TODO) Simulation of target's RCS
   - (TODO) Simulation of LiDAR point cloud from 3D modeled objects/environment
+
+## Dependence
+
+- MATLAB 64bit
+- [MinGW-w64 C/C++ compiler](https://www.mathworks.com/support/requirements/supported-compilers.html) (Windows)
+
+## Installation & Usage
+
+- Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
+- Try the files in `examples`.
+
+

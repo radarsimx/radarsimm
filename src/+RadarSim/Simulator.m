@@ -92,6 +92,11 @@ classdef Simulator < handle
 
                 obj.interference_=reshape(interf_real.Value+1i*interf_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
             end
+
+            if strcmp(radar.rx_.bb_type_, "real")
+                obj.baseband_ = real(obj.baseband_);
+                obj.interference_ = real(obj.interference_);
+            end
         end
 
         function add_point_target(obj, target)

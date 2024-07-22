@@ -25,6 +25,7 @@ classdef Transmitter < handle
         f_offset_;
         frame_start_time_;
         tx_ptr = 0;
+        channels_ = {};
         delay_=[];
     end
 
@@ -170,6 +171,8 @@ classdef Transmitter < handle
             end
 
             obj.delay_ = [obj.delay_, tx_ch.delay_];
+
+            obj.channels_ = [obj.channels_, tx_ch];
         end
 
         function reset(obj)
@@ -179,6 +182,7 @@ classdef Transmitter < handle
 
             obj.tx_ptr=0;
             obj.delay_ = [];
+            obj.channels_ = {};
         end
 
         function delete(obj)

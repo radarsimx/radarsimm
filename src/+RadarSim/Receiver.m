@@ -21,6 +21,8 @@ classdef Receiver < handle
         baseband_gain_;
         load_resistor_;
         noise_bandwidth_;
+        bb_type_;
+        channels_={};
         rx_ptr=0;
     end
 
@@ -34,6 +36,7 @@ classdef Receiver < handle
                 load_resistor
                 baseband_gain
                 kwargs.noise_figure = 0
+                kwargs.bb_type = "complex"
                 kwargs.channels = {}
             end
             if ~libisloaded('radarsimc')
@@ -56,10 +59,17 @@ classdef Receiver < handle
             obj.rf_gain_ = rf_gain;
             obj.baseband_gain_ = baseband_gain;
             obj.load_resistor_ = load_resistor;
-            obj.noise_bandwidth_ = fs;
+
+            obj.bb_type_ = kwargs.bb_type;
+
+            if strcmp(obj.bb_type_, "complex")
+                obj.noise_bandwidth_ = fs;
+            elseif strcmp(obj.bb_type_, "real")
+                obj.noise_bandwidth_ = fs/2;
+            end
 
             obj.rx_ptr = calllib('radarsimc', 'Create_Receiver', obj.fs_, obj.rf_gain_, obj.load_resistor_, ...
-                obj.baseband_gain_);
+                obj.baseband_gain_, obj.noise_bandwidth_);
 
             for ch_idx=1:length(kwargs.channels)
                 obj.add_rxchannel(kwargs.channels{ch_idx});
@@ -95,6 +105,7 @@ classdef Receiver < handle
                     "standard version download links. Your support will help improve the software. " + ...
                     "Thank you for considering it.");
             end
+            obj.channels_ = [obj.channels_, rx_ch];
         end
 
         function reset(obj)
@@ -102,6 +113,8 @@ classdef Receiver < handle
                 calllib('radarsimc','Free_Receiver',obj.rx_ptr);
             end
             obj.rx_ptr=0;
+
+            obj.channels_ = {};
         end
 
         function delete(obj)

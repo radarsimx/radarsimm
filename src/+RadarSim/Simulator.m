@@ -185,9 +185,9 @@ classdef Simulator < handle
                 radar.rx_.baseband_gain_);  % dBm/Hz
             receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts/sqrt(hz)
             noise_amplitude_mixer = sqrt(receiver_noise_watts * radar.rx_.load_resistor_);
-            noise_amplitude_peak = sqrt(2) * noise_amplitude_mixer;
+            % noise_amplitude_peak = noise_amplitude_mixer;
 
-            obj.baseband_ = obj.baseband_+noise_amplitude_peak*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+            obj.baseband_ = obj.baseband_+noise_amplitude_mixer*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
 
         end
 

@@ -16,6 +16,7 @@ classdef Simulator < handle
     properties (Access = public)
         version_ = '';
         baseband_;
+        noise_;
         timestamp_;
         interference_;
 
@@ -47,7 +48,6 @@ classdef Simulator < handle
                 obj
                 radar RadarSim.Radar
                 targets
-                kwargs.noise=true
                 kwargs.density=1
                 kwargs.level='frame' % 'frame', 'pulse', 'sample'
                 kwargs.interf=[]
@@ -80,9 +80,7 @@ classdef Simulator < handle
 
             obj.timestamp_ = radar.timestamp_;
 
-            if kwargs.noise
-                obj.add_noise(radar);
-            end
+            obj.noise_ = obj.generate_noise(radar);
 
             if ~isempty(kwargs.interf)
                 interf_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
@@ -95,6 +93,7 @@ classdef Simulator < handle
 
             if strcmp(radar.rx_.bb_type_, "real")
                 obj.baseband_ = real(obj.baseband_);
+                % obj.noise_ = real(obj.noise_);
                 obj.interference_ = real(obj.interference_);
             end
         end
@@ -174,7 +173,7 @@ classdef Simulator < handle
 
         end
 
-        function add_noise(obj, radar)
+        function noise_mat = generate_noise(obj, radar)
             boltzmann_const = 1.38064852e-23;
             Ts = 290;
             input_noise_dbm = 10 * log10(boltzmann_const * Ts * 1000);  % dBm/Hz
@@ -186,8 +185,12 @@ classdef Simulator < handle
             receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts/sqrt(hz)
             noise_amplitude_mixer = sqrt(receiver_noise_watts * radar.rx_.load_resistor_);
             % noise_amplitude_peak = noise_amplitude_mixer;
-
-            obj.baseband_ = obj.baseband_+noise_amplitude_mixer*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+            
+            if strcmp(radar.rx_.bb_type_, "real")
+                noise_mat = noise_amplitude_mixer*(randn(size(obj.baseband_)));
+            else
+                noise_mat = noise_amplitude_mixer/sqrt(2)*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+            end
 
         end
 

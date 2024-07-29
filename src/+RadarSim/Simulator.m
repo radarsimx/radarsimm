@@ -185,11 +185,29 @@ classdef Simulator < handle
             receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts/sqrt(hz)
             noise_amplitude_mixer = sqrt(receiver_noise_watts * radar.rx_.load_resistor_);
             % noise_amplitude_peak = noise_amplitude_mixer;
+
+            min_time = min(obj.timestamp_,[],"all");
+            num_noise_samples = ceil((max(obj.timestamp_,[],"all")-min_time)*radar.rx_.fs_)+1;
+            noise_mat = zeros(size(obj.baseband_));
+
+            [s1, s2, s3] = size(obj.baseband_);
+
             
             if strcmp(radar.rx_.bb_type_, "real")
-                noise_mat = noise_amplitude_mixer*(randn(size(obj.baseband_)));
+                noise_per_rx = noise_amplitude_mixer*(randn(radar.num_rx_, num_noise_samples));
+                
+                % noise_mat = noise_amplitude_mixer*(randn(size(obj.baseband_)));
             else
-                noise_mat = noise_amplitude_mixer/sqrt(2)*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+                noise_per_rx = noise_amplitude_mixer/sqrt(2)*(randn(radar.num_rx_, num_noise_samples));
+                % noise_mat = noise_amplitude_mixer/sqrt(2)*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+            end
+
+            for ch_idx=1:s3
+                for ps_idx=1:s2
+                    t0=floor((obj.timestamp_(1,ps_idx,ch_idx)-min_time)*radar.rx_.fs_)+1;
+                    rx_ch = mod(ch_idx-1, radar.num_rx_)+1;
+                    noise_mat(:, ps_idx, ch_idx) = noise_per_rx(rx_ch, t0:(t0+s1-1));
+                end
             end
 
         end

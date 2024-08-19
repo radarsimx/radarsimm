@@ -202,10 +202,9 @@ classdef Simulator < handle
             if strcmp(radar.rx_.bb_type_, "real")
                 noise_per_rx = noise_amplitude_mixer*(randn(radar.num_rx_, num_noise_samples));
                 
-                % noise_mat = noise_amplitude_mixer*(randn(size(obj.baseband_)));
             else
                 noise_per_rx = noise_amplitude_mixer/sqrt(2)*(randn(radar.num_rx_, num_noise_samples));
-                % noise_mat = noise_amplitude_mixer/sqrt(2)*(randn(size(obj.baseband_))+1i*randn(size(obj.baseband_)));
+
             end
 
             for ch_idx=1:s3

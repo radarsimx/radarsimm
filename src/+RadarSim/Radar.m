@@ -57,13 +57,12 @@ classdef Radar < handle
                 obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
             end
 
-            obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_.tx_ptr, obj.rx_.rx_ptr);
-
             radar_loc_ptr=libpointer("singlePtr",kwargs.location);
             radar_spd_ptr=libpointer("singlePtr",kwargs.speed);
             radar_rot_ptr=libpointer("singlePtr",kwargs.rotation);
             radar_rrt_ptr=libpointer("singlePtr",kwargs.rotation_rate);
-            calllib('radarsimc', 'Set_Radar_Motion', radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr, obj.radar_ptr);
+
+            obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_.tx_ptr, obj.rx_.rx_ptr, radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr);
 
             obj.num_tx_ = calllib('radarsimc', 'Get_Num_Txchannel', obj.tx_.tx_ptr);
             obj.num_rx_ = calllib('radarsimc', 'Get_Num_Rxchannel', obj.rx_.rx_ptr);

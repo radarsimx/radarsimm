@@ -3,3 +3,4 @@
 src/radarsim.h
 src/radarsimc.dll
 /radarsimm*
+/.vscode

@@ -50,6 +50,8 @@ classdef Simulator < handle
                 targets
                 kwargs.density=1
                 kwargs.level='frame' % 'frame', 'pulse', 'sample'
+                kwargs.noise=true
+                kwargs.ray_filter=[0, 10]
                 kwargs.interf=[]
             end
 
@@ -61,6 +63,8 @@ classdef Simulator < handle
                     obj.add_mesh_target(targets{t_idx});
                 end
             end
+
+            ray_filter = libpointer("int32Ptr",kwargs.ray_filter);
 
             bb_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
             bb_imag = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
@@ -75,12 +79,14 @@ classdef Simulator < handle
                 error("ERROR! Unknow level.");
             end
 
-            calllib('radarsimc','Run_Simulator',radar.radar_ptr, obj.targets_ptr, level, kwargs.density, bb_real, bb_imag);
+            calllib('radarsimc','Run_Simulator',radar.radar_ptr, obj.targets_ptr, level, kwargs.density, ray_filter, bb_real, bb_imag);
             obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
 
             obj.timestamp_ = radar.timestamp_;
 
-            obj.noise_ = obj.generate_noise(radar);
+            if kwargs.noise
+                obj.noise_ = obj.generate_noise(radar);
+            end
 
             if ~isempty(kwargs.interf)
                 interf_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));

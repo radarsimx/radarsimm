@@ -86,7 +86,6 @@ MD %package_path%
 XCOPY /E /Y .\src\ %package_path%\src\
 XCOPY /E /Y .\examples\ %package_path%\examples\
 XCOPY /E /Y .\models\ %package_path%\models\
-XCOPY /Y LICENSE %package_path%\
 XCOPY /E /Y %lib_path%\* %package_path%\src\
 
 ECHO ## Build completed ##

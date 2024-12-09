@@ -113,7 +113,7 @@ tic;
 simc.Run(radar, targets, 'noise', true, 'density', 0.3);
 toc;
 
-baseband=simc.baseband_;
+baseband=simc.baseband_+simc.noise_;
 timestamp=simc.timestamp_;
 
 figure();

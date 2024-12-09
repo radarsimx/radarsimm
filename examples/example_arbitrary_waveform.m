@@ -99,7 +99,7 @@ targets{3} = RadarSim.PointTarget([30 -5 0], [-22 0 0], 15);
 simc = RadarSim.Simulator();
 simc.Run(radar, targets, 'noise', true);
 
-baseband_nonlinear = simc.baseband_;
+baseband_nonlinear = simc.baseband_+simc.noise_;
 timestamp_nonlinear = simc.timestamp_;
 
 %% Simulation of linear chirps
@@ -127,7 +127,7 @@ targets{3} = RadarSim.PointTarget([30 -5 0], [-22 0 0], 15);
 
 simc.Run(radar, targets, 'noise', true);
 
-baseband_linear = simc.baseband_;
+baseband_linear = simc.baseband_+simc.noise_;
 timestamp_linear = simc.timestamp_;
 
 %% Range Profile

@@ -99,7 +99,7 @@ targets{3} = RadarSim.PointTarget([30, 20, 0], [0, 0, 0], 8);
 
 simc = RadarSim.Simulator();
 simc.Run(radar, targets, 'noise', true);
-baseband=simc.baseband_;
+baseband=simc.baseband_+simc.noise_;
 timestamp=simc.timestamp_;
 
 %% Range Profile

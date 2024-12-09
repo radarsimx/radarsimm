@@ -122,7 +122,7 @@ timestamp=simc.timestamp_;
 % However, in a realistic scenario, these two transmitter channels should transmit
 % simultaneously. Consequently, it becomes necessary to combine the baseband
 % signals from these two channels.
-baseband = baseband(:, :, 1)+baseband(:, :, 2);
+baseband = baseband(:, :, 1)+simc.noise_(:, :, 1)/2+baseband(:, :, 2)+simc.noise_(:, :, 2)/2;
 
 figure();
 plot(timestamp(:,1,1), real(baseband(:,1,1)), 'LineWidth',1.5);

@@ -59,7 +59,7 @@ zlabel('z (m)');
 simc = RadarSim.Simulator();
 simc.Run(radar, targets, 'noise', true, 'density', 2, 'level', 'sample');
 
-baseband=simc.baseband_;
+baseband=simc.baseband_+simc.noise_;
 timestamp=simc.timestamp_;
 
 figure();

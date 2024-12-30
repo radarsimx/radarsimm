@@ -27,15 +27,17 @@ classdef Receiver < handle
     end
 
     methods (Access = public)
-
-        % Construct app
-        % 
+        % Constructor for the Receiver class.
+        % Initializes the receiver with specified parameters.
+        %
         % Parameters:
-        %   fs - Sampling frequency
-        %   rf_gain - RF gain
-        %   load_resistor - Load resistor
-        %   baseband_gain - Baseband gain
-        %   kwargs - Additional arguments (noise_figure, bb_type, channels)
+        %   fs (double): Sampling frequency.
+        %   rf_gain (double): RF gain.
+        %   load_resistor (double): Load resistor.
+        %   baseband_gain (double): Baseband gain.
+        %   kwargs.noise_figure (double): Noise figure (default: 0).
+        %   kwargs.bb_type (char): Baseband type ('complex' or 'real') (default: 'complex').
+        %   kwargs.channels (cell): Channels (default: {}).
         function obj = Receiver(fs, rf_gain, load_resistor, baseband_gain, kwargs)
             arguments
                 fs
@@ -84,9 +86,10 @@ classdef Receiver < handle
         end
 
         % Add a receiver channel
+        % Adds a receiver channel to the Receiver object.
         %
         % Parameters:
-        %   rx_ch - An instance of RadarSim.RxChannel
+        %   rx_ch (RadarSim.RxChannel): The receiver channel object.
         function add_rxchannel(obj, rx_ch)
             arguments
                 obj
@@ -120,6 +123,7 @@ classdef Receiver < handle
         end
 
         % Reset the receiver
+        % Resets the Receiver object, freeing any allocated resources.
         function reset(obj)
             if obj.rx_ptr~=0
                 calllib('radarsimc','Free_Receiver',obj.rx_ptr);
@@ -129,7 +133,8 @@ classdef Receiver < handle
             obj.channels_ = {};
         end
 
-        % Delete the receiver and unload the library
+        % Delete the receiver
+        % Deletes the Receiver object and unloads the library if loaded.
         function delete(obj)
             obj.reset();
             if libisloaded('radarsimc')

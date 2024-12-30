@@ -24,16 +24,16 @@ classdef RxChannel < handle
     end
 
     methods (Access = public)
-        % Construct app
         % Constructor for the RxChannel class.
-        % 
+        % Initializes the receiver channel with specified location and optional parameters.
+        %
         % Parameters:
-        %   location (1,3): The location of the receiver channel.
-        %   kwargs.polarization (1,3): The polarization vector. Default is [0,0,1].
-        %   kwargs.azimuth_angle: The azimuth angles in degrees. Default is [-90, 90].
-        %   kwargs.azimuth_pattern: The azimuth pattern. Default is [0, 0].
-        %   kwargs.elevation_angle: The elevation angles in degrees. Default is [-90, 90].
-        %   kwargs.elevation_pattern: The elevation pattern. Default is [0, 0].
+        %   location (1,3 double): The location coordinates of the receiver channel.
+        %   kwargs.polarization (1,3 double): The polarization vector (default: [0,0,1]).
+        %   kwargs.azimuth_angle (1,2 double): The azimuth angle range in degrees (default: [-90, 90]).
+        %   kwargs.azimuth_pattern (1,2 double): The azimuth pattern (default: [0, 0]).
+        %   kwargs.elevation_angle (1,2 double): The elevation angle range in degrees (default: [-90, 90]).
+        %   kwargs.elevation_pattern (1,2 double): The elevation pattern (default: [0, 0]).
         function obj = RxChannel(location, kwargs)
             arguments
                 location (1,3)

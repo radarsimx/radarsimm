@@ -26,16 +26,14 @@ classdef PointTarget < handle
     end
 
     methods (Access = public)
-
-        % Construct app
-        % PointTarget Constructor for the PointTarget class.
+        % Constructor for the PointTarget class.
         % Initializes the location, speed, RCS, and phase of the target.
         %
         % Parameters:
-        %   location (1,3): Location of the target [x, y, z]
-        %   speed (1,3): Speed of the target [vx, vy, vz]
-        %   rcs: Radar cross section of the target
-        %   kwargs.phase: Phase of the target in degrees (default: 0)
+        %   location (1,3 double): Location of the target [x, y, z].
+        %   speed (1,3 double): Speed of the target [vx, vy, vz].
+        %   rcs (double): Radar cross section of the target.
+        %   kwargs.phase (double): Phase of the target in degrees (default: 0).
         function obj = PointTarget(location, speed, rcs, kwargs)
             arguments
                 location (1,3)

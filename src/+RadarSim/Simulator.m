@@ -24,7 +24,6 @@ classdef Simulator < handle
     end
 
     methods (Access = public)
-
         % Constructor for the Simulator class.
         % Loads the 'radarsimc' library if not already loaded and retrieves the version.
         function obj = Simulator()
@@ -48,8 +47,12 @@ classdef Simulator < handle
         % 
         % Parameters:
         %   radar (RadarSim.Radar): The radar object.
-        %   targets: List of target objects.
-        %   kwargs: Additional arguments for simulation configuration.
+        %   targets (cell): List of target objects.
+        %   kwargs.density (double): Density (default: 1).
+        %   kwargs.level (char): Level ('frame', 'pulse', 'sample') (default: 'frame').
+        %   kwargs.noise (logical): Noise flag (default: true).
+        %   kwargs.ray_filter (1,2 double): Ray filter (default: [0, 10]).
+        %   kwargs.interf (struct): Interference (default: []).
         function Run(obj, radar, targets, kwargs)
             arguments
                 obj
@@ -197,10 +200,10 @@ classdef Simulator < handle
         % Generates noise for the radar simulation.
         %
         % Parameters:
-        %   radar: The radar object.
+        %   radar (RadarSim.Radar): The radar object.
         %
         % Returns:
-        %   noise_mat: The generated noise matrix.
+        %   noise_mat (double): The generated noise matrix.
         function noise_mat = generate_noise(obj, radar)
             boltzmann_const = 1.38064852e-23;
             Ts = 290;

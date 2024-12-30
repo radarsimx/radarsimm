@@ -29,14 +29,16 @@ classdef Radar < handle
 
     methods (Access = public)
 
-        % Construct app
         % Constructor for the Radar class.
         % Initializes the radar system with the given transmitter and receiver.
         % 
         % Parameters:
         %   tx (RadarSim.Transmitter): The radar transmitter object.
         %   rx (RadarSim.Receiver): The radar receiver object.
-        %   kwargs (struct): Optional parameters for radar location, speed, rotation, and rotation rate.
+        %   kwargs.location (1,3 double): Radar location coordinates (default: [0,0,0]).
+        %   kwargs.speed (1,3 double): Radar speed (default: [0,0,0]).
+        %   kwargs.rotation (1,3 double): Radar rotation in degrees (default: [0,0,0]).
+        %   kwargs.rotation_rate (1,3 double): Radar rotation rate in degrees per second (default: [0,0,0]).
         function obj = Radar(tx, rx, kwargs)
             arguments
                 tx RadarSim.Transmitter

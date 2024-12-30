@@ -30,8 +30,20 @@ classdef Transmitter < handle
     end
 
     methods (Access = public)
-        % Construct app
-        % This function initializes the Transmitter object with given frequency, time, and other parameters.
+        % Constructor for Transmitter class.
+        % Initializes the Transmitter object with given frequency, time, and other parameters.
+        %
+        % Parameters:
+        %   f (double): Frequency.
+        %   t (double): Time.
+        %   kwargs.tx_power (double): Transmission power (default: 0).
+        %   kwargs.pulses (uint32): Number of pulses (default: 1).
+        %   kwargs.prp (double): Pulse repetition period (default: NaN).
+        %   kwargs.f_offset (double): Frequency offset (default: NaN).
+        %   kwargs.pn_f (double): PN frequency (default: NaN).
+        %   kwargs.pn_power (double): PN power (default: NaN).
+        %   kwargs.frame_time (double): Frame time (default: [0]).
+        %   kwargs.channels (cell): Channels (default: {}).
         function obj = Transmitter(f, t, kwargs)
             arguments
                 f
@@ -129,7 +141,10 @@ classdef Transmitter < handle
         end
 
         % Add transmitter channel
-        % This function adds a transmitter channel to the Transmitter object.
+        % Adds a transmitter channel to the Transmitter object.
+        %
+        % Parameters:
+        %   tx_ch (RadarSim.TxChannel): The transmitter channel object.
         function add_txchannel(obj, tx_ch)
             arguments
                 obj
@@ -144,7 +159,7 @@ classdef Transmitter < handle
             phi_ptn_ptr = libpointer("singlePtr",tx_ch.phi_ptn_);
 
             theta_ptr = libpointer("singlePtr",tx_ch.theta_);
-            theta_ptn_ptr = libpointer("singlePtr",tx_ch.theta_ptn_);
+            theta_ptn_ptr=libpointer("singlePtr",tx_ch.theta_ptn_);
 
             if isempty(tx_ch.pulse_mod_)
                 tx_ch.pulse_mod_ = ones(1, obj.pulses_);
@@ -179,7 +194,7 @@ classdef Transmitter < handle
         end
 
         % Reset transmitter
-        % This function resets the Transmitter object, freeing any allocated resources.
+        % Resets the Transmitter object, freeing any allocated resources.
         function reset(obj)
             if obj.tx_ptr~=0
                 calllib('radarsimc','Free_Transmitter',obj.tx_ptr);
@@ -191,7 +206,7 @@ classdef Transmitter < handle
         end
 
         % Delete transmitter
-        % This function deletes the Transmitter object and unloads the library if loaded.
+        % Deletes the Transmitter object and unloads the library if loaded.
         function delete(obj)
             obj.reset();
             if libisloaded('radarsimc')

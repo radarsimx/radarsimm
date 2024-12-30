@@ -14,6 +14,7 @@
 
 classdef Radar < handle
     properties (Access = public)
+        % Public properties
         version_ = '';
         tx_;
         rx_;
@@ -29,6 +30,13 @@ classdef Radar < handle
     methods (Access = public)
 
         % Construct app
+        % Constructor for the Radar class.
+        % Initializes the radar system with the given transmitter and receiver.
+        % 
+        % Parameters:
+        %   tx (RadarSim.Transmitter): The radar transmitter object.
+        %   rx (RadarSim.Receiver): The radar receiver object.
+        %   kwargs (struct): Optional parameters for radar location, speed, rotation, and rotation rate.
         function obj = Radar(tx, rx, kwargs)
             arguments
                 tx RadarSim.Transmitter
@@ -76,6 +84,8 @@ classdef Radar < handle
 
         end
 
+        % Reset radar
+        % Resets the radar system by freeing the radar pointer.
         function reset(obj)
             if obj.radar_ptr~=0
                 calllib('radarsimc','Free_Radar',obj.radar_ptr);
@@ -83,6 +93,9 @@ classdef Radar < handle
             obj.radar_ptr=0;
         end
 
+        % Delete radar
+        % Destructor for the Radar class.
+        % Frees the radar pointer and unloads the radar library if loaded.
         function delete(obj)
             obj.reset();
             if libisloaded('radarsimc')

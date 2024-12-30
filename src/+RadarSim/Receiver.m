@@ -29,6 +29,13 @@ classdef Receiver < handle
     methods (Access = public)
 
         % Construct app
+        % 
+        % Parameters:
+        %   fs - Sampling frequency
+        %   rf_gain - RF gain
+        %   load_resistor - Load resistor
+        %   baseband_gain - Baseband gain
+        %   kwargs - Additional arguments (noise_figure, bb_type, channels)
         function obj = Receiver(fs, rf_gain, load_resistor, baseband_gain, kwargs)
             arguments
                 fs
@@ -76,6 +83,10 @@ classdef Receiver < handle
             end
         end
 
+        % Add a receiver channel
+        %
+        % Parameters:
+        %   rx_ch - An instance of RadarSim.RxChannel
         function add_rxchannel(obj, rx_ch)
             arguments
                 obj
@@ -108,6 +119,7 @@ classdef Receiver < handle
             obj.channels_ = [obj.channels_, rx_ch];
         end
 
+        % Reset the receiver
         function reset(obj)
             if obj.rx_ptr~=0
                 calllib('radarsimc','Free_Receiver',obj.rx_ptr);
@@ -117,6 +129,7 @@ classdef Receiver < handle
             obj.channels_ = {};
         end
 
+        % Delete the receiver and unload the library
         function delete(obj)
             obj.reset();
             if libisloaded('radarsimc')

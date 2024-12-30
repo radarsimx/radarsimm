@@ -21,12 +21,19 @@ classdef RxChannel < handle
         theta_;
         theta_ptn_;
         antenna_gain_;
-
     end
 
     methods (Access = public)
-
         % Construct app
+        % Constructor for the RxChannel class.
+        % 
+        % Parameters:
+        %   location (1,3): The location of the receiver channel.
+        %   kwargs.polarization (1,3): The polarization vector. Default is [0,0,1].
+        %   kwargs.azimuth_angle: The azimuth angles in degrees. Default is [-90, 90].
+        %   kwargs.azimuth_pattern: The azimuth pattern. Default is [0, 0].
+        %   kwargs.elevation_angle: The elevation angles in degrees. Default is [-90, 90].
+        %   kwargs.elevation_pattern: The elevation pattern. Default is [0, 0].
         function obj = RxChannel(location, kwargs)
             arguments
                 location (1,3)
@@ -53,8 +60,6 @@ classdef RxChannel < handle
             end
 
             obj.antenna_gain_ = max(kwargs.azimuth_pattern);
-
         end
-
     end
 end

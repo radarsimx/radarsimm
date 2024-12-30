@@ -25,7 +25,8 @@ classdef Simulator < handle
 
     methods (Access = public)
 
-        % Construct app
+        % Constructor for the Simulator class.
+        % Loads the 'radarsimc' library if not already loaded and retrieves the version.
         function obj = Simulator()
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
@@ -43,6 +44,12 @@ classdef Simulator < handle
             end
         end
 
+        % Runs the radar simulation.
+        % 
+        % Parameters:
+        %   radar (RadarSim.Radar): The radar object.
+        %   targets: List of target objects.
+        %   kwargs: Additional arguments for simulation configuration.
         function Run(obj, radar, targets, kwargs)
             arguments
                 obj
@@ -104,6 +111,10 @@ classdef Simulator < handle
             end
         end
 
+        % Adds a point target to the simulation.
+        %
+        % Parameters:
+        %   target (RadarSim.PointTarget): The point target object.
         function add_point_target(obj, target)
             arguments
                 obj
@@ -124,6 +135,10 @@ classdef Simulator < handle
             end
         end
 
+        % Adds a mesh target to the simulation.
+        %
+        % Parameters:
+        %   target (RadarSim.MeshTarget): The mesh target object.
         function add_mesh_target(obj, target)
             arguments
                 obj
@@ -179,6 +194,13 @@ classdef Simulator < handle
 
         end
 
+        % Generates noise for the radar simulation.
+        %
+        % Parameters:
+        %   radar: The radar object.
+        %
+        % Returns:
+        %   noise_mat: The generated noise matrix.
         function noise_mat = generate_noise(obj, radar)
             boltzmann_const = 1.38064852e-23;
             Ts = 290;
@@ -217,6 +239,7 @@ classdef Simulator < handle
 
         end
 
+        % Resets the simulation by freeing targets.
         function reset(obj)
             if obj.targets_ptr~=0
                 calllib('radarsimc','Free_Targets',obj.targets_ptr);
@@ -224,6 +247,8 @@ classdef Simulator < handle
             obj.targets_ptr=0;
         end
 
+        % Destructor for the Simulator class.
+        % Frees targets and unloads the 'radarsimc' library if loaded.
         function delete(obj)
             obj.reset();
             if libisloaded('radarsimc')

@@ -31,6 +31,7 @@ classdef Transmitter < handle
 
     methods (Access = public)
         % Construct app
+        % This function initializes the Transmitter object with given frequency, time, and other parameters.
         function obj = Transmitter(f, t, kwargs)
             arguments
                 f
@@ -127,6 +128,8 @@ classdef Transmitter < handle
 
         end
 
+        % Add transmitter channel
+        % This function adds a transmitter channel to the Transmitter object.
         function add_txchannel(obj, tx_ch)
             arguments
                 obj
@@ -175,6 +178,8 @@ classdef Transmitter < handle
             obj.channels_ = [obj.channels_, tx_ch];
         end
 
+        % Reset transmitter
+        % This function resets the Transmitter object, freeing any allocated resources.
         function reset(obj)
             if obj.tx_ptr~=0
                 calllib('radarsimc','Free_Transmitter',obj.tx_ptr);
@@ -185,6 +190,8 @@ classdef Transmitter < handle
             obj.channels_ = {};
         end
 
+        % Delete transmitter
+        % This function deletes the Transmitter object and unloads the library if loaded.
         function delete(obj)
             obj.reset();
             if libisloaded('radarsimc')

@@ -13,6 +13,10 @@
 
 
 classdef TxChannel < handle
+    % TxChannel class represents a transmission channel in the radar simulation.
+    % This class handles the properties and methods related to the transmission
+    % channel including location, polarization, delay, angles, patterns, and modulation.
+
     properties (Access = public)
         location_;
         polarization_;
@@ -29,8 +33,22 @@ classdef TxChannel < handle
     end
 
     methods (Access = public)
-
-        % Construct app
+        % Constructor for TxChannel class.
+        % Initializes the transmission channel with specified location and optional parameters.
+        %
+        % Parameters:
+        %   location (1,3): The location coordinates of the transmission channel.
+        %   kwargs.polarization (1,3): The polarization vector (default: [0,0,1]).
+        %   kwargs.delay: The delay in the transmission (default: 0).
+        %   kwargs.azimuth_angle: The azimuth angle range (default: [-90, 90]).
+        %   kwargs.azimuth_pattern: The azimuth pattern (default: [0, 0]).
+        %   kwargs.elevation_angle: The elevation angle range (default: [-90, 90]).
+        %   kwargs.elevation_pattern: The elevation pattern (default: [0, 0]).
+        %   kwargs.pulse_amp: The pulse amplitude.
+        %   kwargs.pulse_phs: The pulse phase.
+        %   kwargs.mod_t: The modulation time.
+        %   kwargs.phs: The phase.
+        %   kwargs.amp: The amplitude.
         function obj = TxChannel(location, kwargs)
             arguments
                 location (1,3)

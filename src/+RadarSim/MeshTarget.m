@@ -24,13 +24,23 @@ classdef MeshTarget < handle
         origin_;
         permittivity_;
         is_ground_;
-
-
     end
 
     methods (Access = public)
-
         % Construct app
+        % Constructor for the MeshTarget class.
+        % 
+        % Parameters:
+        %   points: Array of points defining the mesh.
+        %   connectivity_list: List defining the connectivity of the mesh points.
+        %   location: 1x3 array specifying the location of the target.
+        %   speed: 1x3 array specifying the speed of the target.
+        %   rotation: 1x3 array specifying the rotation of the target in degrees.
+        %   rotation_rate: 1x3 array specifying the rotation rate of the target in degrees per second.
+        %   kwargs: Optional keyword arguments including:
+        %       - origin: 1x3 array specifying the origin of the target (default: [0,0,0]).
+        %       - permittivity: String specifying the permittivity of the target (default: 'PEC').
+        %       - is_ground: Boolean specifying if the target is on the ground (default: false).
         function obj = MeshTarget(points, connectivity_list, location, speed, rotation, rotation_rate, kwargs)
             arguments
                 points

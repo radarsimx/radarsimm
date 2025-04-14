@@ -23,7 +23,6 @@ classdef Transmitter < handle
         prp_;
         pulse_start_time_;
         f_offset_;
-        frame_start_time_;
         tx_ptr = 0;
         channels_ = {};
         delay_=[];
@@ -54,7 +53,6 @@ classdef Transmitter < handle
                 kwargs.f_offset = NaN
                 kwargs.pn_f = NaN
                 kwargs.pn_power = NaN
-                kwargs.frame_time = [0]
                 kwargs.channels = {}
             end
             if ~libisloaded('radarsimc')
@@ -125,13 +123,10 @@ classdef Transmitter < handle
 
             f_offset_ptr = libpointer("doublePtr",obj.f_offset_);
 
-            obj.frame_start_time_ = kwargs.frame_time;
-            frame_start_time_ptr = libpointer("doublePtr",obj.frame_start_time_);
-
+            
             obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', ...
                 f_ptr, t_ptr, length(obj.f_), ...
                 f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
-                frame_start_time_ptr, length(obj.frame_start_time_), ...
                 obj.power_);
 
             for ch_idx=1:length(kwargs.channels)

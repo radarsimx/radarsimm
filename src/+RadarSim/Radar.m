@@ -21,6 +21,7 @@ classdef Radar < handle
         num_tx_;
         num_rx_;
         num_frame_;
+        frame_start_time_;
         samples_per_pulse_;
         timestamp_;
 
@@ -43,6 +44,7 @@ classdef Radar < handle
             arguments
                 tx RadarSim.Transmitter
                 rx RadarSim.Receiver
+                kwargs.frame_time = [0]
                 kwargs.location (1,3) = [0,0,0]
                 kwargs.speed (1,3) = [0,0,0]
                 kwargs.rotation (1,3) = [0,0,0]
@@ -67,16 +69,19 @@ classdef Radar < handle
                 obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
             end
 
+            obj.frame_start_time_ = kwargs.frame_time;
+            frame_start_time_ptr = libpointer("doublePtr",obj.frame_start_time_);
+
             radar_loc_ptr=libpointer("singlePtr",kwargs.location);
             radar_spd_ptr=libpointer("singlePtr",kwargs.speed);
             radar_rot_ptr=libpointer("singlePtr",kwargs.rotation);
             radar_rrt_ptr=libpointer("singlePtr",kwargs.rotation_rate);
 
-            obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_.tx_ptr, obj.rx_.rx_ptr, radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr);
+            obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_.tx_ptr, obj.rx_.rx_ptr, frame_start_time_ptr, length(obj.frame_start_time_), radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr);
 
             obj.num_tx_ = calllib('radarsimc', 'Get_Num_Txchannel', obj.tx_.tx_ptr);
             obj.num_rx_ = calllib('radarsimc', 'Get_Num_Rxchannel', obj.rx_.rx_ptr);
-            obj.num_frame_ = length(obj.tx_.frame_start_time_);
+            obj.num_frame_ = length(obj.frame_start_time_);
 
             obj.samples_per_pulse_ = floor(obj.tx_.pulse_duration_*obj.rx_.fs_);
 

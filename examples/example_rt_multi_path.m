@@ -27,7 +27,7 @@ prp = 100e-6;
 num_pulses = 1;
 frame_time = 0:1:289;
 
-tx = RadarSim.Transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'frame_time', frame_time, 'channels', {RadarSim.TxChannel([0 0 0])});
+tx = RadarSim.Transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
@@ -40,7 +40,7 @@ rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 
 % Radar
 
-radar = RadarSim.Radar(tx, rx);
+radar = RadarSim.Radar(tx, rx, 'frame_time', frame_time);
 
 % Targets
 tg1=stlread('../models/cr.stl');
@@ -94,7 +94,7 @@ prp = 100e-6;
 num_pulses = 1;
 frame_time = 0:1:289;
 
-tx = RadarSim.Transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'frame_time', frame_time, 'channels', {RadarSim.TxChannel([0 0 0])});
+tx = RadarSim.Transmitter(f, t, 'tx_power', 15, 'prp', prp, 'pulses', num_pulses, 'channels', {RadarSim.TxChannel([0 0 0])});
 
 % Receiver
 
@@ -107,7 +107,7 @@ rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 
 % Radar
 
-radar = RadarSim.Radar(tx, rx);
+radar = RadarSim.Radar(tx, rx, 'frame_time', frame_time);
 
 % Targets
 tg1=stlread('../models/cr.stl');

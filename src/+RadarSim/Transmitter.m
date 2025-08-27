@@ -57,17 +57,17 @@ classdef Transmitter < handle
             end
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
-                version_ptr = libpointer("int32Ptr", zeros(1, 2));
+                version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
                 calllib('radarsimc', 'Get_Version', version_ptr);
-                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
+                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2)), '.', num2str(version_ptr.Value(3))];
 
                 % error("ERROR! radarsimc library has already loaded into the memory.")
             else
-                version_ptr = libpointer("int32Ptr", zeros(1, 2));
+                version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
                 calllib('radarsimc', 'Get_Version', version_ptr);
-                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
+                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2)), '.', num2str(version_ptr.Value(3))];
             end
 
             obj.f_ = f;

@@ -12,7 +12,7 @@
 % ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝     ╚═╝╚═╝  ╚═╝
 
 
-classdef Simulator < handle
+classdef RadarSimulator < handle
     properties (Access = public)
         version_ = '';
         baseband_;
@@ -24,22 +24,22 @@ classdef Simulator < handle
     end
 
     methods (Access = public)
-        % Constructor for the Simulator class.
+        % Constructor for the RadarSimulator class.
         % Loads the 'radarsimc' library if not already loaded and retrieves the version.
-        function obj = Simulator()
+        function obj = RadarSimulator()
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
-                version_ptr = libpointer("int32Ptr", zeros(1, 2));
+                version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
                 calllib('radarsimc', 'Get_Version', version_ptr);
-                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
+                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2)), '.', num2str(version_ptr.Value(3))];
 
                 % error("ERROR! radarsimc library has already loaded into the memory.")
             else
-                version_ptr = libpointer("int32Ptr", zeros(1, 2));
+                version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
                 calllib('radarsimc', 'Get_Version', version_ptr);
-                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2))];
+                obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2)), '.', num2str(version_ptr.Value(3))];
             end
         end
 
@@ -89,7 +89,7 @@ classdef Simulator < handle
                 error("ERROR! Unknow level.");
             end
 
-            calllib('radarsimc','Run_Simulator',radar.radar_ptr, obj.targets_ptr, level, kwargs.density, ray_filter, bb_real, bb_imag);
+            calllib('radarsimc','Run_RadarSimulator',radar.radar_ptr, obj.targets_ptr, level, kwargs.density, ray_filter, bb_real, bb_imag);
             obj.baseband_=reshape(bb_real.Value+1i*bb_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
 
             obj.timestamp_ = radar.timestamp_;
@@ -102,7 +102,7 @@ classdef Simulator < handle
                 interf_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
                 interf_imag = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
                 
-                calllib('radarsimc','Run_Interference',radar.radar_ptr, kwargs.interf.radar_ptr, interf_real, interf_imag);
+                calllib('radarsimc','Run_InterferenceSimulator',radar.radar_ptr, kwargs.interf.radar_ptr, interf_real, interf_imag);
 
                 obj.interference_=reshape(interf_real.Value+1i*interf_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
             end
@@ -250,7 +250,7 @@ classdef Simulator < handle
             obj.targets_ptr=0;
         end
 
-        % Destructor for the Simulator class.
+        % Destructor for the RadarSimulator class.
         % Frees targets and unloads the 'radarsimc' library if loaded.
         function delete(obj)
             obj.reset();

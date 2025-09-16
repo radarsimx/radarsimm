@@ -52,7 +52,7 @@ targets{2} = RadarSim.PointTarget([35 0 0], [35 0 0], 20, 'phase', 0);
 
 %% Run Simulation
 
-simc = RadarSim.Simulator();
+simc = RadarSim.RadarSimulator();
 simc.Run(radar, targets, 'noise', true);
 
 baseband=simc.baseband_+simc.noise_;

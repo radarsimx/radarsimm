@@ -58,7 +58,7 @@ ylabel('y (m)');
 zlabel('z (m)');
 
 %% Run Simulation
-simc = RadarSim.Simulator();
+simc = RadarSim.RadarSimulator();
 tic;
 simc.Run(radar, targets, 'noise', false, 'density', 1, 'level','pulse');
 toc;

@@ -108,7 +108,7 @@ targets{3} = RadarSim.MeshTarget(tg3.Points, ...
 
 %% Run Simulation
 
-simc = RadarSim.Simulator();
+simc = RadarSim.RadarSimulator();
 tic;
 simc.Run(radar, targets, 'noise', true, 'density', 0.3);
 toc;

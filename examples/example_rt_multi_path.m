@@ -62,11 +62,11 @@ targets{2} = RadarSim.MeshTarget(tg2.Points, ...
     [0, 0, 0], ...
     [0, 0, 0], ...
     'permittivity', 3.2+0.1i, ...
-    'is_ground', true);
+    'skip_diffusion', true);
 
 
 % Run Simulation
-simc = RadarSim.Simulator();
+simc = RadarSim.RadarSimulator();
 tic;
 simc.Run(radar, targets, 'noise', false, 'density', 0.5);
 toc;

@@ -23,7 +23,7 @@ classdef MeshTarget < handle
         rotation_rate_;
         origin_;
         permittivity_;
-        is_ground_;
+        skip_diffusion_;
     end
 
     methods (Access = public)
@@ -39,7 +39,7 @@ classdef MeshTarget < handle
         %   rotation_rate (1,3 double): Rotation rate of the target in degrees per second.
         %   kwargs.origin (1,3 double): Origin of the target (default: [0,0,0]).
         %   kwargs.permittivity (char): Permittivity of the target (default: 'PEC').
-        %   kwargs.is_ground (logical): Flag indicating if the target is on the ground (default: false).
+        %   kwargs.skip_diffusion (logical): Flag indicating to skip the diffusion calculation (default: false).
         function obj = MeshTarget(points, connectivity_list, location, speed, rotation, rotation_rate, kwargs)
             arguments
                 points
@@ -50,7 +50,7 @@ classdef MeshTarget < handle
                 rotation_rate (1,3)
                 kwargs.origin (1,3) = [0,0,0]
                 kwargs.permittivity = 'PEC'
-                kwargs.is_ground = false
+                kwargs.skip_diffusion = false
             end
 
             obj.points_ = points;
@@ -61,7 +61,7 @@ classdef MeshTarget < handle
             obj.rotation_rate_ = rotation_rate/180*pi;
             obj.origin_ = kwargs.origin;
             obj.permittivity_ = kwargs.permittivity;
-            obj.is_ground_ = kwargs.is_ground;
+            obj.skip_diffusion_ = kwargs.skip_diffusion;
         end
     end
 end

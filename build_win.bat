@@ -57,25 +57,25 @@ if /I %ARCH% == gpu (
     if /I %TIER% == standard (
         ECHO ## Build standard GPU verion ##
         SET package_path=".\radarsimm_win_x86_64_gpu"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu"
-        CALL build_win.bat --arch gpu --tier standard
+        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu\radarsimlib"
+        CALL build.bat --arch gpu --tier standard
     ) else if /I %TIER% == free (
         ECHO ## Build freetier GPU verion ##
         SET package_path=".\radarsimm_win_x86_64_gpu_free"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu_free"
-        CALL build_win.bat --arch gpu --tier free
+        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu_free\radarsimlib"
+        CALL build.bat --arch gpu --tier free
     )
 ) else if /I %ARCH% == cpu (
     if /I %TIER% == standard (
         ECHO ## Build standard CPU verion ##
         SET package_path=".\radarsimm_win_x86_64_cpu"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu"
-        CALL build_win.bat --arch cpu --tier standard
+        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu\radarsimlib"
+        CALL build.bat --arch cpu --tier standard
     ) else if /I %TIER% == free (
         ECHO ## Build freetier CPU verion ##
         SET package_path=".\radarsimm_win_x86_64_cpu_free"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu_free"
-        CALL build_win.bat --arch cpu --tier free
+        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu_free\radarsimlib"
+        CALL build.bat --arch cpu --tier free
     )
 )
 

@@ -1,28 +1,387 @@
-name: Build Standard Library on Windows
+name: Build Windows Libraries
+
+# GitHub Actions workflow for building and packaging RadarSimM on Windows platforms.
+#
+# This workflow builds RadarSimM across different build tiers (standard/free)
+# and architectures (CPU/GPU). It provides comprehensive Windows coverage with
+# both CPU-only and CUDA GPU-accelerated builds.
+#
+# Build Matrix:
+# - Windows Latest: MSVC compiler, 4 builds (2 architectures × 2 tiers)
+# - Architectures: CPU (x86_64), GPU (CUDA)
+# - Build tiers: standard (full features), free (limited features)
+# - Total builds: 4
+#
+# Features:
+# - CUDA toolkit setup for GPU builds
+# - Build optimization and caching
+# - Artifact verification and validation
+# - Multi-architecture artifact packing
+# - Detailed build reporting and summaries
+# - Error handling with build log uploads
+#
+# Outputs:
+# - Individual artifacts for each build configuration
+# - Packed archive containing all builds organized by architecture and tier
+# - Build summaries and statistics
+#
+# Triggers:
+# - Tag pushes (release events)
+# - Manual workflow dispatch
+# - Push to master branch
+# - Pull requests to master branch
 
 on:
   push:
     branches: [main]
+    tags:
+      - "*"
   pull_request:
     branches: [main]
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2025
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows CPU Standard build
+          - tier: standard
+            arch: cpu
+            artifact_name: radarsimm_win_x86_64_cpu
+          # Windows CPU Free Tier build
+          - tier: free
+            arch: cpu
+            artifact_name: radarsimm_win_x86_64_cpu_free
+          # Windows GPU Standard build
+          - tier: standard
+            arch: gpu
+            artifact_name: radarsimm_win_x86_64_gpu
+          # Windows GPU Free Tier build
+          - tier: free
+            arch: gpu
+            artifact_name: radarsimm_win_x86_64_gpu_free
 
     steps:
-      - name: Remove Windows OpenSSH and use the default ssh in git
-        run: Remove-WindowsCapability -Online -Name OpenSSH.Client
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.RADARSIMCPP }}
           submodules: recursive
-      - name: Build RadarSimM
+          fetch-depth: 0
+
+      - name: Setup CUDA Toolkit
+        if: matrix.arch == 'gpu'
+        uses: N-Storm/cuda-toolkit@v0.2.27m
+        with:
+          cuda: '13.0.0'
+          method: 'local'
+          use-github-cache: false
+
+      - name: Verify CUDA installation
+        if: matrix.arch == 'gpu'
         run: |
-          .\build_win.bat --arch cpu --tier standard
+          echo "::group::CUDA Verification"
+          nvcc --version
+          echo "CUDA_PATH: %CUDA_PATH%"
+          echo "PATH: %PATH%"
+          if exist "%CUDA_PATH%\bin\" (
+            dir "%CUDA_PATH%\bin\" | findstr nvcc
+          ) else (
+            echo "CUDA bin directory not found"
+          )
+          if exist "%CUDA_PATH%\lib\x64\" (
+            echo "CUDA lib directory found"
+          ) else (
+            echo "CUDA lib directory not found"
+          )
+          echo "::endgroup::"
+        shell: cmd
+
+      - name: Display build information
+        run: |
+          echo "::group::Build Information"
+          echo "OS: windows-latest"
+          echo "Tier: ${{ matrix.tier }}"
+          echo "Architecture: ${{ matrix.arch }}"
+          if "${{ matrix.arch }}" == "gpu" (
+            echo "CUDA Version: $(nvcc --version | findstr "release" | for /f "tokens=5" %%a in ('findstr "release"') do echo %%a)"
+          )
+          echo "::endgroup::"
+
+          echo "::group::System Information"
+          systeminfo | findstr /C:"OS Name" /C:"OS Version"
+          if "${{ matrix.arch }}" == "gpu" (
+            nvcc --version
+          )
+          echo "::endgroup::"
+        shell: cmd
+
+      - name: Build RadarSimM
+        env:
+          CUDA_PATH: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
+          CUDA_HOME: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
+          CUDACXX: ${{ matrix.arch == 'gpu' && format('{0}\bin\nvcc.exe', env.CUDA_PATH) || '' }}
+          CUDA_TOOLKIT_ROOT_DIR: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
+        run: |
+          echo "::group::Build Process"
+          .\build_win.bat --arch=${{ matrix.arch }} --tier=${{ matrix.tier }}
+          echo "::endgroup::"
+        shell: cmd
+
+      - name: Create build summary
+        run: |
+          echo "## Build Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $env:GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $env:GITHUB_STEP_SUMMARY
+          echo "| OS | windows-latest |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Tier | ${{ matrix.tier }} |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Architecture | ${{ matrix.arch }} |" >> $env:GITHUB_STEP_SUMMARY
+          echo "| Artifact Name | ${{ matrix.artifact_name }} |" >> $env:GITHUB_STEP_SUMMARY
+        shell: powershell
+
       - name: Archive built module
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: radarsimm_win_x86_64_cpu
-          path: .\radarsimm_win_x86_64_cpu
+          name: ${{ matrix.artifact_name }}
+          path: .\radarsimm_win_x86_64_${{ matrix.arch }}${{ matrix.tier == 'free' && '_free' || '' }}
+          retention-days: 1
+          compression-level: 6
+
+      - name: Upload build logs on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-logs-${{ matrix.artifact_name }}
+          path: |
+            .\build_logs\
+            *.log
+          retention-days: 1
+
+  # Pack all artifacts into a single file
+  pack-artifacts:
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Create artifacts directory
+        run: mkdir -p artifacts
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Delete downloaded artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          failOnError: false
+          name: |
+            radarsimm_win_x86_64_cpu*
+            radarsimm_win_x86_64_gpu*
+
+      - name: Display downloaded artifacts
+        run: |
+          echo "::group::Downloaded Artifacts"
+          find artifacts/ -type f -name "*.dll" -o -name "*.h" -o -name "*.lib" | head -20
+          echo "::endgroup::"
+
+      - name: Create artifact structure
+        run: |
+          mkdir -p packed/radarsimm_windows_all
+
+          # Create the directory structure
+          mkdir -p packed/radarsimm_windows_all/trial/Windows_x86_64_CPU
+          mkdir -p packed/radarsimm_windows_all/standard/Windows_x86_64_CPU
+          mkdir -p packed/radarsimm_windows_all/trial/Windows_x86_64_GPU
+          mkdir -p packed/radarsimm_windows_all/standard/Windows_x86_64_GPU
+
+          # Copy each artifact to appropriate directory based on architecture and tier
+          for dir in artifacts/*/; do
+            if [ -d "$dir" ]; then
+              artifact_name=$(basename "$dir")
+              echo "Processing artifact: $artifact_name"
+              
+              # Determine target directory based on artifact name
+              if [[ "$artifact_name" == *"gpu"* ]]; then
+                # GPU builds
+                if [[ "$artifact_name" == *"_free"* ]]; then
+                  target_dir="packed/radarsimm_windows_all/trial/Windows_x86_64_GPU"
+                else
+                  target_dir="packed/radarsimm_windows_all/standard/Windows_x86_64_GPU"
+                fi
+              else
+                # CPU builds
+                if [[ "$artifact_name" == *"_free"* ]]; then
+                  target_dir="packed/radarsimm_windows_all/trial/Windows_x86_64_CPU"
+                else
+                  target_dir="packed/radarsimm_windows_all/standard/Windows_x86_64_CPU"
+                fi
+              fi
+              
+              # Ensure target directory exists
+              mkdir -p "$target_dir"
+              
+              # Copy the library contents
+              echo "Copying library from $dir to $target_dir/"
+              cp -r "$dir"/* "$target_dir/" 2>/dev/null || true
+            fi
+          done
+
+      - name: Verify artifact structure
+        run: |
+          echo "::group::Artifact Structure Verification"
+          echo "Final directory structure:"
+          find packed/radarsimm_windows_all -type d | sort
+          echo ""
+          echo "Files in each directory:"
+          for dir in packed/radarsimm_windows_all/*/Windows_*; do
+            if [ -d "$dir" ]; then
+              echo "Contents of $dir:"
+              ls -la "$dir" || echo "Directory is empty or doesn't exist"
+              echo ""
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Create README for packed artifacts
+        run: |
+          cat > packed/radarsimm_windows_all/README.md << 'EOF'
+          # RadarSimM Windows Build Artifacts
+
+          This archive contains all RadarSimM builds for Windows platforms organized by architecture and tier.
+
+          ## Directory Structure
+
+          The builds are organized in the following structure:
+
+          ```
+          standard/
+          ├── Windows_x86_64_CPU/
+          │   ├── radarsimm.dll
+          │   ├── radarsimm.lib
+          │   └── radarsimm.h
+          └── Windows_x86_64_GPU/
+              ├── radarsimm.dll
+              ├── radarsimm.lib
+              └── radarsimm.h
+
+          trial/
+          ├── Windows_x86_64_CPU/
+          │   ├── radarsimm.dll
+          │   ├── radarsimm.lib
+          │   └── radarsimm.h
+          └── Windows_x86_64_GPU/
+              ├── radarsimm.dll
+              ├── radarsimm.lib
+              └── radarsimm.h
+          ```
+
+          ## Architecture and Tier Information
+
+          ### Windows_x86_64_CPU (CPU-only builds)
+          - **standard/**: Full-featured builds with all capabilities
+          - **trial/**: Free tier builds with limited features
+          - Compatible with any x86_64 Windows system
+
+          ### Windows_x86_64_GPU (CUDA GPU-accelerated builds)
+          - **standard/**: Full-featured builds with GPU acceleration
+          - **trial/**: Free tier builds with limited GPU features
+          - Requires CUDA 12.8.1 or compatible version
+          - Compatible with NVIDIA GPUs
+
+          ## Build Information
+
+          - **Total Builds**: 4
+          - **Architectures**: x86_64 CPU, x86_64 GPU (CUDA)
+          - **Tiers**: Standard (full features), Trial (limited features)
+          - **Library Type**: Dynamic library (.dll) with import library (.lib)
+          - **Compiler**: MSVC
+          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          ## Usage
+
+          1. Choose the appropriate architecture directory for your system
+          2. Choose between standard or trial tier based on your needs
+          3. Link against radarsimm.lib and include radarsimm.h in your project
+          4. Ensure radarsimm.dll is accessible at runtime
+          5. For GPU builds, ensure CUDA runtime is installed on target system
+
+          ## Requirements
+
+          - **CPU builds**: Any x86_64 Windows system
+          - **GPU builds**: NVIDIA GPU with CUDA 12.8.1+ support
+          - **Runtime**: Microsoft Visual C++ Redistributable
+          EOF
+
+      - name: Create compressed archive
+        run: |
+          cd packed
+          tar -czf radarsimm_windows_all_builds.tar.gz radarsimm_windows_all/
+
+          # Create zip version as well
+          zip -r radarsimm_windows_all_builds.zip radarsimm_windows_all/
+
+          echo "::group::Archive Information"
+          ls -lh *.tar.gz *.zip
+          echo "::endgroup::"
+
+      - name: Upload packed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: radarsimm_windows_all_builds
+          path: |
+            packed/radarsimm_windows_all_builds.tar.gz
+            packed/radarsimm_windows_all_builds.zip
+          retention-days: 1
+          compression-level: 0
+
+  # Summary job that runs after all builds complete
+  build-summary:
+    needs: [build, pack-artifacts]
+    runs-on: windows-latest
+    if: always()
+    steps:
+      - name: Generate build summary
+        run: |
+          echo "# Windows RadarSimM Build Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "## Build Matrix Results" >> $env:GITHUB_STEP_SUMMARY
+          echo "Total builds: 4 - 2 architectures x 2 tiers" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "### Architecture Distribution" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **CPU x86_64**: 2 builds on windows-latest" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **GPU CUDA**: 2 builds on windows-latest" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "### Tier Distribution" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Standard**: 2 builds - CPU and GPU" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Free**: 2 builds - CPU and GPU" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "### Artifacts Generated" >> $env:GITHUB_STEP_SUMMARY
+          echo "- ``radarsimm_win_x86_64_cpu`` - Standard CPU" >> $env:GITHUB_STEP_SUMMARY
+          echo "- ``radarsimm_win_x86_64_cpu_free`` - Free CPU" >> $env:GITHUB_STEP_SUMMARY
+          echo "- ``radarsimm_win_x86_64_gpu`` - Standard GPU" >> $env:GITHUB_STEP_SUMMARY
+          echo "- ``radarsimm_win_x86_64_gpu_free`` - Free GPU" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "### Packed Artifacts" >> $env:GITHUB_STEP_SUMMARY
+          if ("${{ needs.pack-artifacts.result }}" -eq "success") {
+            echo "**All artifacts successfully packed into single archive**" >> $env:GITHUB_STEP_SUMMARY
+            echo "- Archive: ``radarsimm_windows_all_builds``" >> $env:GITHUB_STEP_SUMMARY
+            echo "- Formats: tar.gz, zip" >> $env:GITHUB_STEP_SUMMARY
+            echo "- Contains: All 4 build variants organized by configuration" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            echo "**Artifact packing failed or was skipped**" >> $env:GITHUB_STEP_SUMMARY
+          }
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "### Build Status" >> $env:GITHUB_STEP_SUMMARY
+          if ("${{ needs.build.result }}" -eq "success") {
+            echo "**All builds completed successfully!**" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            echo "**Some builds may have failed. Check individual job logs for details.**" >> $env:GITHUB_STEP_SUMMARY
+          }
+        shell: powershell

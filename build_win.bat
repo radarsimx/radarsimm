@@ -1,6 +1,6 @@
 @ECHO OFF
 
-set TIER=standard
+set LICENSE=off
 set ARCH=cpu
 
 goto GETOPTS
@@ -8,22 +8,22 @@ goto GETOPTS
 :Help
 ECHO:
 ECHO Usages:
-ECHO    --help	Show the usages of the parameters
-ECHO    --tier	Build tier, choose 'standard' or 'free'. Default is 'standard'
-ECHO    --arch	Build architecture, choose 'cpu' or 'gpu'. Default is 'cpu'
+ECHO    --help      Show the usages of the parameters
+ECHO    --license   Enable license verification, choose 'on' or 'off'. Default is 'off'
+ECHO    --arch      Build architecture, choose 'cpu' or 'gpu'. Default is 'cpu'
 ECHO:
 goto EOF
 
 :GETOPTS
 if /I "%1" == "--help" goto Help
-if /I "%1" == "--tier" set TIER=%2 & shift
+if /I "%1" == "--license" set LICENSE=%2 & shift
 if /I "%1" == "--arch" set ARCH=%2 & shift
 shift
 if not "%1" == "" goto GETOPTS
 
-if /I NOT %TIER% == free (
-    if /I NOT %TIER% == standard (
-        ECHO ERROR: Invalid --tier parameters, please choose 'free' or 'standard'
+if /I NOT %LICENSE% == on (
+    if /I NOT %LICENSE% == off (
+        ECHO ERROR: Invalid --license parameters, please choose 'on' or 'off'
         goto EOF
     )
 )
@@ -54,29 +54,15 @@ ECHO:
 CD ".\radarsimlib"
 
 if /I %ARCH% == gpu (
-    if /I %TIER% == standard (
-        ECHO ## Build standard GPU verion ##
-        SET package_path=".\radarsimm_win_x86_64_gpu"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu\radarsimlib"
-        CALL build.bat --arch gpu --tier standard
-    ) else if /I %TIER% == free (
-        ECHO ## Build freetier GPU verion ##
-        SET package_path=".\radarsimm_win_x86_64_gpu_free"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu_free\radarsimlib"
-        CALL build.bat --arch gpu --tier free
-    )
+    ECHO ## Build GPU version (license=%LICENSE%) ##
+    SET package_path=".\radarsimm_win_x86_64_gpu"
+    SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu\radarsimlib"
+    CALL build.bat --arch gpu --license %LICENSE%
 ) else if /I %ARCH% == cpu (
-    if /I %TIER% == standard (
-        ECHO ## Build standard CPU verion ##
-        SET package_path=".\radarsimm_win_x86_64_cpu"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu\radarsimlib"
-        CALL build.bat --arch cpu --tier standard
-    ) else if /I %TIER% == free (
-        ECHO ## Build freetier CPU verion ##
-        SET package_path=".\radarsimm_win_x86_64_cpu_free"
-        SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu_free\radarsimlib"
-        CALL build.bat --arch cpu --tier free
-    )
+    ECHO ## Build CPU version (license=%LICENSE%) ##
+    SET package_path=".\radarsimm_win_x86_64_cpu"
+    SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu\radarsimlib"
+    CALL build.bat --arch cpu --license %LICENSE%
 )
 
 CD ..

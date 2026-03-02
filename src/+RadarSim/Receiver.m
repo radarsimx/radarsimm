@@ -50,12 +50,17 @@ classdef Receiver < handle
             end
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
+
+                % Activate license
+                lic_files = dir('license_radarsimc_*.lic');
+                for k = 1:length(lic_files)
+                    calllib('radarsimc', 'Set_License', fullfile(lic_files(k).folder, lic_files(k).name), 'RadarSimM');
+                end
+
                 version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
                 calllib('radarsimc', 'Get_Version', version_ptr);
                 obj.version_ = [num2str(version_ptr.Value(1)), '.', num2str(version_ptr.Value(2)), '.', num2str(version_ptr.Value(3))];
-
-                % error("ERROR! radarsimc library has already loaded into the memory.")
             else
                 version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
@@ -85,6 +90,18 @@ classdef Receiver < handle
             end
         end
 
+        % Get license information
+        % Returns the license information string from the license manager.
+        %
+        % Returns:
+        %   license_info (string): License information string.
+        function license_info = get_license_info(obj)
+            buffer_size = 1024;
+            buffer_ptr = libpointer('cstring', blanks(buffer_size));
+            actual_length = calllib('radarsimc', 'Get_License_Info', buffer_ptr, buffer_size);
+            license_info = string(buffer_ptr.Value);
+        end
+
         % Add a receiver channel
         % Adds a receiver channel to the Receiver object.
         %
@@ -112,12 +129,9 @@ classdef Receiver < handle
                 obj.rx_ptr);
 
             if status
-                error("RadarSim:FreeTier", "Error: \nYou're currently using RadarSimM's FreeTier, " + ...
-                    "which imposes a restriction on the maximum number of receiver channels to 1. " + ...
-                    "Please consider supporting my work by upgrading to the standard version. Just choose " + ...
-                    "any amount greater than zero on https://radarsimx.com/product/radarsimm/ to access the " + ...
-                    "standard version download links. Your support will help improve the software. " + ...
-                    "Thank you for considering it.");
+                error("RadarSim:Unlicensed", "Error: \nYou're currently using RadarSimM's unlicensed version, " + ...
+                    "which limits the maximum number of receiver channels to 1. " + ...
+                    "Please consider upgrading to the licensed version at https://radarsimx.com/product/radarsimm/.");
             end
             obj.channels_ = [obj.channels_, rx_ch];
         end

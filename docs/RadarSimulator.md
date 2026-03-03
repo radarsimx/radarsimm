@@ -1,3 +1,8 @@
+---
+layout: default
+title: RadarSimulator
+---
+
 # RadarSim.RadarSimulator
 
 [&larr; Back to index](index.md)

@@ -1,3 +1,8 @@
+---
+layout: default
+title: Radar
+---
+
 # RadarSim.Radar
 
 [&larr; Back to index](index.md)

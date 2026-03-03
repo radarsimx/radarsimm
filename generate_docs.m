@@ -44,6 +44,11 @@ end
 % ------------------------------------------------------------------
 function write_index(output_dir, class_names)
     fid = fopen(fullfile(output_dir, 'index.md'), 'w');
+    w(fid, '---');
+    w(fid, 'layout: default');
+    w(fid, 'title: Home');
+    w(fid, '---');
+    w(fid, '');
     w(fid, '# RadarSimM Documentation');
     w(fid, '');
     w(fid, 'Radar Simulator for MATLAB &mdash; [radarsimx.com](https://radarsimx.com)');
@@ -79,6 +84,11 @@ function write_class_doc(output_dir, class_name, src_path)
     doc = parse_class(lines);
 
     fid = fopen(fullfile(output_dir, [class_name '.md']), 'w');
+    w(fid, '---');
+    w(fid, 'layout: default');
+    w(fid, 'title: %s', class_name);
+    w(fid, '---');
+    w(fid, '');
     w(fid, '# RadarSim.%s', class_name);
     w(fid, '');
     w(fid, '[&larr; Back to index](index.md)');

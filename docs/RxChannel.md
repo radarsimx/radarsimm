@@ -1,3 +1,8 @@
+---
+layout: default
+title: RxChannel
+---
+
 # RadarSim.RxChannel
 
 [&larr; Back to index](index.md)

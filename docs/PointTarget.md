@@ -1,3 +1,8 @@
+---
+layout: default
+title: PointTarget
+---
+
 # RadarSim.PointTarget
 
 [&larr; Back to index](index.md)

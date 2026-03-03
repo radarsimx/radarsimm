@@ -1,3 +1,8 @@
+---
+layout: default
+title: Receiver
+---
+
 # RadarSim.Receiver
 
 [&larr; Back to index](index.md)

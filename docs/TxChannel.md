@@ -1,3 +1,8 @@
+---
+layout: default
+title: TxChannel
+---
+
 # RadarSim.TxChannel
 
 [&larr; Back to index](index.md)

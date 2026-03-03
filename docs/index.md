@@ -1,3 +1,8 @@
+---
+layout: default
+title: Home
+---
+
 # RadarSimM Documentation
 
 Radar Simulator for MATLAB &mdash; [radarsimx.com](https://radarsimx.com)

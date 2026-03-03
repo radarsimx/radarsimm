@@ -1,3 +1,8 @@
+---
+layout: default
+title: License
+---
+
 # RadarSim.License
 
 [&larr; Back to index](index.md)

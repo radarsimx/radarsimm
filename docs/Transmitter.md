@@ -1,3 +1,8 @@
+---
+layout: default
+title: Transmitter
+---
+
 # RadarSim.Transmitter
 
 [&larr; Back to index](index.md)

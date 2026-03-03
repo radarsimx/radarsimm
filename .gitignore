@@ -5,3 +5,6 @@ src/radarsimc.dll
 /radarsimm*
 /.vscode
 *.lic
+src/+RadarSim/radarsim.h
+src/+RadarSim/radarsimc.lib
+src/+RadarSim/radarsimc.dll

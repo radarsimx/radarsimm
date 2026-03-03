@@ -30,8 +30,15 @@ classdef RadarSimulator < handle
             if ~libisloaded('radarsimc')
                 loadlibrary('radarsimc','radarsim.h');
 
-                % Activate license
-                lic_files = dir('license_radarsimc_*.lic');
+                % Activate license - search in all MATLAB paths
+                lic_files = [];
+                matlab_paths = strsplit(path(), pathsep);
+                for p_idx = 1:length(matlab_paths)
+                    found_files = dir(fullfile(matlab_paths{p_idx}, 'license_RadarSimM_*.lic'));
+                    if ~isempty(found_files)
+                        lic_files = [lic_files; found_files];
+                    end
+                end
                 for k = 1:length(lic_files)
                     calllib('radarsimc', 'Set_License', fullfile(lic_files(k).folder, lic_files(k).name), 'RadarSimM');
                 end

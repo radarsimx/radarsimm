@@ -1,0 +1,4 @@
+# Jekyll configuration for RadarSimM documentation
+theme: jekyll-theme-minimal
+title: RadarSimM Documentation
+description: MATLAB interface for radar simulation

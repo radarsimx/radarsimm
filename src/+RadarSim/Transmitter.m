@@ -56,17 +56,11 @@ classdef Transmitter < handle
                 kwargs.channels = {}
             end
             if ~libisloaded('radarsimc')
-                loadlibrary('radarsimc','radarsim.h');
+                pkg_dir = fileparts(mfilename('fullpath'));
+                loadlibrary(fullfile(pkg_dir, 'radarsimc'), fullfile(pkg_dir, 'radarsim.h'));
 
-                % Activate license - search in all MATLAB paths
-                lic_files = [];
-                matlab_paths = strsplit(path(), pathsep);
-                for p_idx = 1:length(matlab_paths)
-                    found_files = dir(fullfile(matlab_paths{p_idx}, 'license_RadarSimM_*.lic'));
-                    if ~isempty(found_files)
-                        lic_files = [lic_files; found_files];
-                    end
-                end
+                % Activate license - search in the package folder only
+                lic_files = dir(fullfile(pkg_dir, 'license_RadarSimM_*.lic'));
                 for k = 1:length(lic_files)
                     calllib('radarsimc', 'Set_License', fullfile(lic_files(k).folder, lic_files(k).name), 'RadarSimM');
                 end

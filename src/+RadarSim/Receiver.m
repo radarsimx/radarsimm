@@ -52,11 +52,8 @@ classdef Receiver < handle
                 pkg_dir = fileparts(mfilename('fullpath'));
                 loadlibrary(fullfile(pkg_dir, 'radarsimc'), fullfile(pkg_dir, 'radarsim.h'));
 
-                % Activate license - search in the package folder only
-                lic_files = dir(fullfile(pkg_dir, 'license_RadarSimM_*.lic'));
-                for k = 1:length(lic_files)
-                    calllib('radarsimc', 'Set_License', fullfile(lic_files(k).folder, lic_files(k).name), 'RadarSimM');
-                end
+                % Activate license using License class
+                RadarSim.License.set_license();
 
                 version_ptr = libpointer("int32Ptr", zeros(1, 3));
 
@@ -89,18 +86,6 @@ classdef Receiver < handle
             for ch_idx=1:length(kwargs.channels)
                 obj.add_rxchannel(kwargs.channels{ch_idx});
             end
-        end
-
-        % Get license information
-        % Returns the license information string from the license manager.
-        %
-        % Returns:
-        %   license_info (string): License information string.
-        function license_info = get_license_info(obj)
-            buffer_size = 1024;
-            buffer_ptr = libpointer('cstring', blanks(buffer_size));
-            actual_length = calllib('radarsimc', 'Get_License_Info', buffer_ptr, buffer_size);
-            license_info = string(buffer_ptr.Value);
         end
 
         % Add a receiver channel

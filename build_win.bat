@@ -54,12 +54,12 @@ ECHO:
 CD ".\radarsimlib"
 
 if /I %ARCH% == gpu (
-    ECHO ## Build GPU version (license=%LICENSE%) ##
+    ECHO [Build GPU version - license=%LICENSE%]
     SET package_path=".\radarsimm_win_x86_64_gpu"
     SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu\radarsimlib"
     CALL build.bat --arch gpu --license %LICENSE%
 ) else if /I %ARCH% == cpu (
-    ECHO ## Build CPU version (license=%LICENSE%) ##
+    ECHO [Build CPU version - license=%LICENSE%]
     SET package_path=".\radarsimm_win_x86_64_cpu"
     SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu\radarsimlib"
     CALL build.bat --arch cpu --license %LICENSE%
@@ -74,4 +74,4 @@ XCOPY /E /Y .\examples\ %package_path%\examples\
 XCOPY /E /Y .\models\ %package_path%\models\
 XCOPY /E /Y %lib_path%\* %package_path%\src\
 
-ECHO ## Build completed ##
+ECHO [Build completed]

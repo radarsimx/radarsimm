@@ -33,4 +33,4 @@ Constructor for the PointTarget class. Initializes the location, speed, RCS, and
 - kwargs.phase (double): Phase of the target in degrees (default: 0).
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

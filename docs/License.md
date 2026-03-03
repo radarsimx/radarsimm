@@ -55,4 +55,4 @@ RadarSim.License.set('/path/to/license.lic');
 ```
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

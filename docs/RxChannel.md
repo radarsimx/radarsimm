@@ -35,4 +35,4 @@ Constructor for the RxChannel class. Initializes the receiver channel with speci
 - kwargs.elevation_pattern (1,2 double): The elevation pattern (default: [0, 0]).
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

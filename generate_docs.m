@@ -43,6 +43,7 @@ end
 
 % ------------------------------------------------------------------
 function write_index(output_dir, class_names)
+    current_year = num2str(year(datetime('now')));
     fid = fopen(fullfile(output_dir, 'index.md'), 'w');
     w(fid, '---');
     w(fid, 'layout: default');
@@ -74,12 +75,13 @@ function write_index(output_dir, class_names)
     w(fid, '```');
     w(fid, '');
     w(fid, '---');
-    w(fid, '*Copyright (C) 2023 - PRESENT radarsimx.com*');
+    w(fid, sprintf('*Copyright (C) 2023 - %s RadarSimX LLC*', current_year));
     fclose(fid);
 end
 
 % ------------------------------------------------------------------
 function write_class_doc(output_dir, class_name, src_path)
+    current_year = num2str(year(datetime('now')));
     lines = read_lines(src_path);
     doc = parse_class(lines);
 
@@ -147,7 +149,7 @@ function write_class_doc(output_dir, class_name, src_path)
     end
 
     w(fid, '---');
-    w(fid, '*Copyright (C) 2023 - PRESENT radarsimx.com*');
+    w(fid, sprintf('*Copyright (C) 2023 - %s RadarSimX LLC*', current_year));
     fclose(fid);
 end
 

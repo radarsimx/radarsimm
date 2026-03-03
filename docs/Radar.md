@@ -46,4 +46,4 @@ Reset radar Resets the radar system by freeing the radar pointer.
 Delete radar Destructor for the Radar class. Frees the radar pointer and unloads the radar library if loaded.
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

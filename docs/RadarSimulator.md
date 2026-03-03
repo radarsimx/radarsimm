@@ -73,4 +73,4 @@ Resets the simulation by freeing targets.
 Destructor for the RadarSimulator class. Frees targets and unloads the 'radarsimc' library if loaded.
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

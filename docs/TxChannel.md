@@ -47,4 +47,4 @@ Constructor for TxChannel class. Initializes the transmission channel with speci
 - kwargs.amp (double): The amplitude.
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

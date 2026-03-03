@@ -60,4 +60,4 @@ Reset transmitter Resets the Transmitter object, freeing any allocated resources
 Delete transmitter Deletes the Transmitter object and unloads the library if loaded.
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

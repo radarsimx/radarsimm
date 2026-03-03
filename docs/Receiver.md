@@ -55,4 +55,4 @@ Reset the receiver Resets the Receiver object, freeing any allocated resources.
 Delete the receiver Deletes the Receiver object and unloads the library if loaded.
 
 ---
-*Copyright (C) 2023 - PRESENT radarsimx.com*
+*Copyright (C) 2023 - 2026 RadarSimX LLC*

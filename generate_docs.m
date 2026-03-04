@@ -50,6 +50,10 @@ function write_index(output_dir, class_names)
     w(fid, 'title: Home');
     w(fid, '---');
     w(fid, '');
+    w(fid, '<p align="center">');
+    w(fid, '  <img src="../assets/radarsimm.svg" alt="RadarSimM" width="400"/>');
+    w(fid, '</p>');
+    w(fid, '');
     w(fid, '# RadarSimM Documentation');
     w(fid, '');
     w(fid, 'Radar Simulator for MATLAB &mdash; [radarsimx.com](https://radarsimx.com)');

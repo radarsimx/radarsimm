@@ -3,6 +3,10 @@ layout: default
 title: Home
 ---
 
+<p align="center">
+  <img src="../assets/radarsimm.svg" alt="RadarSimM" width="400"/>
+</p>
+
 # RadarSimM Documentation
 
 Radar Simulator for MATLAB &mdash; [radarsimx.com](https://radarsimx.com)
@@ -27,7 +31,7 @@ tx_ch = RadarSim.TxChannel([0 0 0]);
 rx_ch = RadarSim.RxChannel([0 0 0]);
 
 %% Create transmitter and receiver
-tx = RadarSim.Transmitter(10e9, 0.1, 'channels', {tx_ch});
+tx = RadarSim.Transmitter([10e9, 11e9], 0.1, 'channels', {tx_ch});
 rx = RadarSim.Receiver(40000, 20, 1000, 50, 'channels', {rx_ch});
 
 %% Create radar and targets
@@ -37,6 +41,7 @@ targets = {RadarSim.PointTarget([100 0 0], [0 0 0], 10)};
 %% Run simulation
 simc = RadarSim.RadarSimulator();
 simc.Run(radar, targets);
+baseband = simc.baseband_;  %% Get simulated data
 ```
 
 ---

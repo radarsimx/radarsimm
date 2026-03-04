@@ -22,15 +22,21 @@ Radar Simulator for MATLAB &mdash; [radarsimx.com](https://radarsimx.com)
 ## Quick Start
 
 ```matlab
-%% Set license
-RadarSim.License.set_license();
+%% Create channels
+tx_ch = RadarSim.TxChannel([0 0 0]);
+rx_ch = RadarSim.RxChannel([0 0 0]);
 
 %% Create transmitter and receiver
-tx = RadarSim.Transmitter(f, t, 'channels', {tx_ch});
-rx = RadarSim.Receiver(fs, rf_gain, load_resistor, bb_gain, 'channels', {rx_ch});
+tx = RadarSim.Transmitter(10e9, 0.1, 'channels', {tx_ch});
+rx = RadarSim.Receiver(40000, 20, 1000, 50, 'channels', {rx_ch});
 
-%% Create radar system
+%% Create radar and targets
 radar = RadarSim.Radar(tx, rx);
+targets = {RadarSim.PointTarget([100 0 0], [0 0 0], 10)};
+
+%% Run simulation
+simc = RadarSim.RadarSimulator();
+simc.Run(radar, targets);
 ```
 
 ---

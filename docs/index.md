@@ -1,11 +1,8 @@
 ---
 layout: default
 title: Home
+logo: https://github.com/radarsimx/radarsimm/blob/main/assets/radarsimm.svg
 ---
-
-<p align="center">
-  <img src="../assets/radarsimm.svg" alt="RadarSimM" width="400"/>
-</p>
 
 # RadarSimM Documentation
 

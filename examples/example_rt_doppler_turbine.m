@@ -11,10 +11,6 @@
 
 clear;
 
-%% Add path of the module
-
-addpath("../src");
-
 %% Transmitter
 
 f=24.125e9;

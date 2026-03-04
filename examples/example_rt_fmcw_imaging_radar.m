@@ -11,10 +11,6 @@
 
 clear;
 
-%% Add path of the module
-
-addpath("../src");
-
 %% Transmitter channel
 wavelength = 3e8 / 60.5e9;
 N_tx = 64;

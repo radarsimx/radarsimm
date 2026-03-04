@@ -11,10 +11,6 @@
 
 clear;
 
-%% Add path of the module
-
-addpath("../src");
-
 %% Transmitter
 
 f=[77e9-50e6, 77e9+50e6];

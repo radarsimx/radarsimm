@@ -69,9 +69,9 @@ CD ..
 
 RMDIR /Q/S %package_path%
 MD %package_path%
-XCOPY /E /Y .\src\ %package_path%\src\
-XCOPY /E /Y .\examples\ %package_path%\examples\
+XCOPY /E /Y .\src\ %package_path%\
+XCOPY /E /Y .\examples\ %package_path%\
 XCOPY /E /Y .\models\ %package_path%\models\
-XCOPY /E /Y %lib_path%\* %package_path%\src\
+XCOPY /E /Y %lib_path%\* %package_path%\+RadarSim\
 
 ECHO [Build completed]

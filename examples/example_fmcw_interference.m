@@ -11,10 +11,6 @@
 
 clear;
 
-%% Add path of the module
-
-addpath("../src");
-
 %% 
 
 int_tx_ch = RadarSim.TxChannel([0 0.1 0], ...

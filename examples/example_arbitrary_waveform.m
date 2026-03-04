@@ -11,9 +11,6 @@
 
 clear;
 
-%% Add path of the module
-
-addpath("../src");
 
 %% Non-linear Chirp vs. Linear Chirp
 

@@ -11,10 +11,6 @@
 
 clear;
 
-%% Add path of the module
-
-addpath("../src");
-
 %% Case 1: A corner reflector with ground surface
 
 % Transmitter

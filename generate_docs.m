@@ -48,7 +48,6 @@ function write_index(output_dir, class_names)
     w(fid, '---');
     w(fid, 'layout: default');
     w(fid, 'title: Home');
-    w(fid, 'logo: https://github.com/radarsimx/radarsimm/blob/main/assets/radarsimm.svg');
     w(fid, '---');
     w(fid, '');
     w(fid, '# RadarSimM Documentation');

@@ -36,7 +36,7 @@ rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 radar = RadarSim.Radar(tx, rx);
 
 %% Targets
-cr=stlread('../models/cr.stl');
+cr=stlread('./models/cr.stl');
 
 targets = {};
 targets{1} = RadarSim.MeshTarget(cr.Points, ...

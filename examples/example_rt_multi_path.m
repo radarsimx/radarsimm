@@ -39,7 +39,7 @@ rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 radar = RadarSim.Radar(tx, rx, 'frame_time', frame_time);
 
 % Targets
-tg1=stlread('../models/cr.stl');
+tg1=stlread('./models/cr.stl');
 
 targets = {};
 targets{1} = RadarSim.MeshTarget(tg1.Points, ...
@@ -49,7 +49,7 @@ targets{1} = RadarSim.MeshTarget(tg1.Points, ...
     [0, 0, 0], ...
     [0, 0, 0]);
 
-tg2=stlread('../models/surface_400x400.stl');
+tg2=stlread('./models/surface_400x400.stl');
 
 targets{2} = RadarSim.MeshTarget(tg2.Points, ...
     tg2.ConnectivityList, ...
@@ -106,7 +106,7 @@ rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 radar = RadarSim.Radar(tx, rx, 'frame_time', frame_time);
 
 % Targets
-tg1=stlread('../models/cr.stl');
+tg1=stlread('./models/cr.stl');
 
 targets = {};
 targets{1} = RadarSim.MeshTarget(tg1.Points, ...

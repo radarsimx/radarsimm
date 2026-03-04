@@ -36,7 +36,7 @@ rx = RadarSim.Receiver(fs, rf_gain, resistor, bb_gain, 'noise_figure', noise_fig
 radar = RadarSim.Radar(tx, rx);
 
 %% Targets
-car = stlread('../models/vehicles/ford_raptor.stl');
+car = stlread('./models/vehicles/ford_raptor.stl');
 
 targets = {};
 targets{1} = RadarSim.MeshTarget(car.Points, ...
@@ -46,7 +46,7 @@ targets{1} = RadarSim.MeshTarget(car.Points, ...
     [180, 0, 0], ...
     [0, 0, 0]);
 
-ground = stlread('../models/surface_400x400.stl');
+ground = stlread('./models/surface_400x400.stl');
 
 targets{2} = RadarSim.MeshTarget(ground.Points, ...
     ground.ConnectivityList, ...

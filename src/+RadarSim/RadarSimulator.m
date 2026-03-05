@@ -1,6 +1,6 @@
 % ----------
 % RadarSimM - Radar Simulator for MATLAB
-% Copyright (C) 2023 - PRESENT  radarsimx.com
+% Copyright (C) 2023 - PRESENT  RadarSimX LLC
 % E-mail: info@radarsimx.com
 % Website: https://radarsimx.com
 %

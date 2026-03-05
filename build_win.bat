@@ -38,7 +38,7 @@ if /I NOT %ARCH% == cpu (
 ECHO Automatic build script of radarsimlib for Windows
 ECHO:
 ECHO ----------
-ECHO Copyright (C) 2023 - PRESENT  radarsimx.com
+ECHO Copyright (C) 2023 - PRESENT  RadarSimX LLC
 ECHO E-mail: info@radarsimx.com
 ECHO Website: https://radarsimx.com
 ECHO:

@@ -1,6 +1,6 @@
 # RadarSimM
 
-<img src="./assets/radarsimm.svg" alt="logo" width="200"/>
+<img src="https://raw.githubusercontent.com/radarsimx/.github/refs/heads/main/profile/radarsimm.svg" alt="logo" width="200"/>
 
 Radar Simulator for MATLAB.
 

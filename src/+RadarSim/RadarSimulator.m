@@ -66,6 +66,7 @@ classdef RadarSimulator < handle
                 kwargs.noise=true
                 kwargs.ray_filter=[0, 10]
                 kwargs.interf=[]
+                kwargs.noise_seed uint64 = 0
             end
 
             obj.targets_ptr = calllib('radarsimc', 'Init_Targets');
@@ -98,14 +99,17 @@ classdef RadarSimulator < handle
             obj.timestamp_ = radar.timestamp_;
 
             if kwargs.noise
-                obj.noise_ = obj.generate_noise(radar);
+                obj.noise_ = obj.generate_noise(radar, kwargs.noise_seed);
             end
 
             if ~isempty(kwargs.interf)
                 interf_real = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
                 interf_imag = libpointer("doublePtr",zeros(radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_));
                 
-                calllib('radarsimc','Run_InterferenceSimulator',radar.radar_ptr, kwargs.interf.radar_ptr, interf_real, interf_imag);
+                status = calllib('radarsimc','Run_InterferenceSimulator',radar.radar_ptr, kwargs.interf.radar_ptr, interf_real, interf_imag);
+                if status ~= 0
+                    error('RadarSim:InterferenceSimulator', 'Interference simulation failed with error code %d', status);
+                end
 
                 obj.interference_=reshape(interf_real.Value+1i*interf_imag.Value, radar.samples_per_pulse_, radar.tx_.pulses_, radar.num_tx_*radar.num_rx_*radar.num_frame_);
             end
@@ -204,42 +208,56 @@ classdef RadarSimulator < handle
         %
         % Returns:
         %   noise_mat (double): The generated noise matrix.
-        function noise_mat = generate_noise(obj, radar)
+        function noise_mat = generate_noise(obj, radar, seed)
+            arguments
+                obj
+                radar RadarSim.Radar
+                seed uint64 = 0
+            end
+
             boltzmann_const = 1.38064852e-23;
             Ts = 290;
             input_noise_dbm = 10 * log10(boltzmann_const * Ts * 1000);  % dBm/Hz
-            receiver_noise_dbm = (input_noise_dbm+ ...
-                radar.rx_.rf_gain_+ ...
-                radar.rx_.noise_figure_+ ...
-                10 * log10(radar.rx_.noise_bandwidth_)+ ...
+            receiver_noise_dbm = (input_noise_dbm + ...
+                radar.rx_.rf_gain_ + ...
+                radar.rx_.noise_figure_ + ...
+                10 * log10(radar.rx_.noise_bandwidth_) + ...
                 radar.rx_.baseband_gain_);  % dBm/Hz
-            receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts/sqrt(hz)
+            receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);
             noise_amplitude_mixer = sqrt(receiver_noise_watts * radar.rx_.load_resistor_);
-            % noise_amplitude_peak = noise_amplitude_mixer;
 
-            min_time = min(obj.timestamp_,[],"all");
-            num_noise_samples = ceil((max(obj.timestamp_,[],"all")-min_time)*radar.rx_.fs_)+1;
-            noise_mat = zeros(size(obj.baseband_));
+            is_complex = strcmp(radar.rx_.bb_type_, "complex");
 
-            [s1, s2, s3] = size(obj.baseband_);
+            ts_channel_size = int32(radar.num_tx_ * radar.num_rx_);
+            ts_pulse_size = int32(radar.tx_.pulses_);
+            ts_sample_size = int32(radar.samples_per_pulse_);
 
-            
-            if strcmp(radar.rx_.bb_type_, "real")
-                noise_per_rx = noise_amplitude_mixer*(randn(radar.num_rx_, num_noise_samples));
-                
+            % Use only the first frame's timestamps
+            ts = radar.timestamp_(:, :, 1:double(ts_channel_size));
+            ts_ptr = libpointer("doublePtr", ts);
+
+            total_size = radar.num_frame_ * double(ts_channel_size) * double(ts_pulse_size) * double(ts_sample_size);
+            noise_real_ptr = libpointer("doublePtr", zeros(1, total_size));
+            noise_imag_ptr = libpointer("doublePtr", zeros(1, total_size));
+
+            status = calllib('radarsimc', 'Run_NoiseSimulator', ...
+                radar.radar_ptr, noise_amplitude_mixer, is_complex, ...
+                ts_ptr, ts_channel_size, ts_pulse_size, ts_sample_size, ...
+                noise_real_ptr, noise_imag_ptr, seed);
+
+            if status ~= 0
+                error('RadarSim:NoiseSimulator', 'Noise simulation failed with error code %d', status);
+            end
+
+            if is_complex
+                noise_mat = reshape(noise_real_ptr.Value + 1i * noise_imag_ptr.Value, ...
+                    radar.samples_per_pulse_, radar.tx_.pulses_, ...
+                    radar.num_tx_ * radar.num_rx_ * radar.num_frame_);
             else
-                noise_per_rx = noise_amplitude_mixer/sqrt(2)*(randn(radar.num_rx_, num_noise_samples));
-
+                noise_mat = reshape(noise_real_ptr.Value, ...
+                    radar.samples_per_pulse_, radar.tx_.pulses_, ...
+                    radar.num_tx_ * radar.num_rx_ * radar.num_frame_);
             end
-
-            for ch_idx=1:s3
-                for ps_idx=1:s2
-                    t0=floor((obj.timestamp_(1,ps_idx,ch_idx)-min_time)*radar.rx_.fs_)+1;
-                    rx_ch = mod(ch_idx-1, radar.num_rx_)+1;
-                    noise_mat(:, ps_idx, ch_idx) = noise_per_rx(rx_ch, t0:(t0+s1-1));
-                end
-            end
-
         end
 
         % Resets the simulation by freeing targets.

@@ -37,6 +37,7 @@ Runs the radar simulation.
 - kwargs.noise (logical): Noise flag (default: true).
 - kwargs.ray_filter (1,2 double): Ray filter (default: [0, 10]).
 - kwargs.interf (struct): Interference (default: []).
+- kwargs.noise_seed (uint64): Random seed for noise generation, 0 for random (default: 0).
 
 ### `add_point_target(obj, target)`
 
@@ -54,13 +55,14 @@ Adds a mesh target to the simulation.
 
 - target (RadarSim.MeshTarget): The mesh target object.
 
-### `noise_mat = generate_noise(obj, radar)`
+### `noise_mat = generate_noise(obj, radar, seed)`
 
-Generates noise for the radar simulation.
+Generates noise for the radar simulation using the C library noise simulator.
 
 **Parameters:**
 
 - radar (RadarSim.Radar): The radar object.
+- seed (uint64): Random seed for noise generation, 0 for random (default: 0).
 
 **Returns:** noise_mat (double): The generated noise matrix.
 

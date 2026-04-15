@@ -38,9 +38,12 @@ Constructor for Transmitter class. Initializes the Transmitter object with given
 - kwargs.pulses (uint32): Number of pulses (default: 1).
 - kwargs.prp (double): Pulse repetition period (default: NaN).
 - kwargs.f_offset (double): Frequency offset (default: NaN).
-- kwargs.pn_f (double): PN frequency (default: NaN).
-- kwargs.pn_power (double): PN power (default: NaN).
-- kwargs.frame_time (double): Frame time (default: [0]).
+- kwargs.pn_f (double): Phase noise frequency offset vector (Hz) (default: NaN).
+- kwargs.pn_power (double): Phase noise power density vector (dBc/Hz) (default: NaN).
+- kwargs.pn_fs (double): Phase noise sampling rate (Hz) (default: NaN). Required when pn_f/pn_power are specified.
+- kwargs.pn_num_samples (double): Number of phase noise samples to generate (default: NaN). Required when pn_f/pn_power are specified.
+- kwargs.pn_seed (uint64): Random seed for phase noise generation, 0 for random (default: 0).
+- kwargs.pn_validation (logical): Enable phase noise validation mode (default: false).
 - kwargs.channels (cell): Channels (default: {}).
 
 ### `add_txchannel(obj, tx_ch)`

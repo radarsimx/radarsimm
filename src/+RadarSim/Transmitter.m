@@ -53,6 +53,10 @@ classdef Transmitter < handle
                 kwargs.f_offset = NaN
                 kwargs.pn_f = NaN
                 kwargs.pn_power = NaN
+                kwargs.pn_fs = NaN
+                kwargs.pn_num_samples = NaN
+                kwargs.pn_seed uint64 = 0
+                kwargs.pn_validation logical = false
                 kwargs.channels = {}
             end
             if ~libisloaded('radarsimc')
@@ -126,11 +130,31 @@ classdef Transmitter < handle
 
             f_offset_ptr = libpointer("doublePtr",obj.f_offset_);
 
-            
-            obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', ...
-                f_ptr, t_ptr, length(obj.f_), ...
-                f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
-                obj.power_);
+            if ~any(isnan(kwargs.pn_f)) && ~any(isnan(kwargs.pn_power))
+                % Validate SSB phase noise parameters
+                if length(kwargs.pn_f) ~= length(kwargs.pn_power)
+                    error("ERROR! pn_f and pn_power must have the same length.");
+                end
+                if isnan(kwargs.pn_fs) || isnan(kwargs.pn_num_samples)
+                    error("ERROR! pn_fs and pn_num_samples are required for SSB phase noise.");
+                end
+
+                pn_f_ptr = libpointer("doublePtr", kwargs.pn_f);
+                pn_power_ptr = libpointer("doublePtr", kwargs.pn_power);
+
+                obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter_SSBPhaseNoise', ...
+                    f_ptr, t_ptr, length(obj.f_), ...
+                    f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
+                    obj.power_, ...
+                    pn_f_ptr, pn_power_ptr, length(kwargs.pn_f), ...
+                    kwargs.pn_fs, int32(kwargs.pn_num_samples), ...
+                    kwargs.pn_seed, kwargs.pn_validation);
+            else
+                obj.tx_ptr = calllib('radarsimc', 'Create_Transmitter', ...
+                    f_ptr, t_ptr, length(obj.f_), ...
+                    f_offset_ptr, pulse_start_time_ptr, obj.pulses_, ...
+                    obj.power_);
+            end
 
             for ch_idx=1:length(kwargs.channels)
                 obj.add_txchannel(kwargs.channels{ch_idx});

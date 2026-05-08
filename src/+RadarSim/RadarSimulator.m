@@ -223,41 +223,21 @@ classdef RadarSimulator < handle
                 radar.rx_.noise_figure_ + ...
                 10 * log10(radar.rx_.noise_bandwidth_) + ...
                 radar.rx_.baseband_gain_);  % dBm/Hz
-            receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);
+            receiver_noise_watts = 1e-3 * 10^(receiver_noise_dbm / 10);  % Watts
             noise_amplitude_mixer = sqrt(receiver_noise_watts * radar.rx_.load_resistor_);
 
-            is_complex = strcmp(radar.rx_.bb_type_, "complex");
+            [s1, s2, s3] = size(obj.baseband_);
+            is_complex = ~strcmp(radar.rx_.bb_type_, "real");
 
-            ts_channel_size = int32(radar.num_tx_ * radar.num_rx_);
-            ts_pulse_size = int32(radar.tx_.pulses_);
-            ts_sample_size = int32(radar.samples_per_pulse_);
+            ts_ptr = libpointer("doublePtr", obj.timestamp_);
+            noise_real_ptr = libpointer("doublePtr", zeros(s1, s2, s3));
+            noise_imag_ptr = libpointer("doublePtr", zeros(s1, s2, s3));
 
-            % Use only the first frame's timestamps
-            ts = radar.timestamp_(:, :, 1:double(ts_channel_size));
-            ts_ptr = libpointer("doublePtr", ts);
-
-            total_size = radar.num_frame_ * double(ts_channel_size) * double(ts_pulse_size) * double(ts_sample_size);
-            noise_real_ptr = libpointer("doublePtr", zeros(1, total_size));
-            noise_imag_ptr = libpointer("doublePtr", zeros(1, total_size));
-
-            status = calllib('radarsimc', 'Run_NoiseSimulator', ...
+            calllib('radarsimc', 'Run_NoiseSimulator', ...
                 radar.radar_ptr, noise_amplitude_mixer, is_complex, ...
-                ts_ptr, ts_channel_size, ts_pulse_size, ts_sample_size, ...
-                noise_real_ptr, noise_imag_ptr, seed);
+                ts_ptr, s3, s2, s1, noise_real_ptr, noise_imag_ptr, uint64(0));
 
-            if status ~= 0
-                error('RadarSim:NoiseSimulator', 'Noise simulation failed with error code %d', status);
-            end
-
-            if is_complex
-                noise_mat = reshape(noise_real_ptr.Value + 1i * noise_imag_ptr.Value, ...
-                    radar.samples_per_pulse_, radar.tx_.pulses_, ...
-                    radar.num_tx_ * radar.num_rx_ * radar.num_frame_);
-            else
-                noise_mat = reshape(noise_real_ptr.Value, ...
-                    radar.samples_per_pulse_, radar.tx_.pulses_, ...
-                    radar.num_tx_ * radar.num_rx_ * radar.num_frame_);
-            end
+            noise_mat = reshape(noise_real_ptr.Value + 1i * noise_imag_ptr.Value, s1, s2, s3);
         end
 
         % Resets the simulation by freeing targets.

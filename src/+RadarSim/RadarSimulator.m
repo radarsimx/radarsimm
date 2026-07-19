@@ -201,6 +201,88 @@ classdef RadarSimulator < handle
 
         end
 
+        % Get the number of mesh targets currently registered in the
+        % simulation's internal target manager. Must be called after Run().
+        %
+        % Returns:
+        %   num (double): Number of mesh targets.
+        function num = get_num_mesh_targets(obj)
+            if obj.targets_ptr == 0
+                error("RadarSim:NoTargets", "Run() must be called before querying target mesh state.");
+            end
+            num = calllib('radarsimc', 'Get_Num_Targets', obj.targets_ptr);
+        end
+
+        % Get the triangle (cell) count of a specific mesh target. Must be
+        % called after Run().
+        %
+        % Parameters:
+        %   target_index (double): 1-based index of the mesh target, among
+        %     only the mesh-type targets passed to Run(), in the order they
+        %     appear there.
+        %
+        % Returns:
+        %   cell_size (double): Triangle count of the target.
+        function cell_size = get_target_mesh_size(obj, target_index)
+            arguments
+                obj
+                target_index (1,1) double
+            end
+
+            if obj.targets_ptr == 0
+                error("RadarSim:NoTargets", "Run() must be called before querying target mesh state.");
+            end
+            cell_size = calllib('radarsimc', 'Get_Target_Mesh_Size', obj.targets_ptr, target_index - 1);
+        end
+
+        % Get the transformed (global) mesh vertex positions of one mesh
+        % target at query timestamp(s), without mutating the live target
+        % used by this simulator. Must be called after Run().
+        %
+        % Parameters:
+        %   target_index (double): 1-based index of the mesh target, among
+        %     only the mesh-type targets passed to Run(), in the order they
+        %     appear there.
+        %   timestamp (1,:) double: Query timestamp(s) in seconds (default: 0).
+        %   kwargs.sim_timestamps (1,:) double: Real-world time of each
+        %     motion-array sample, required only for a target that was
+        %     constructed with time-varying (array) location/rotation
+        %     (default: []).
+        %
+        % Returns:
+        %   points (3, 3, cell_size, K double): Transformed triangle vertex
+        %     coordinates, where K = numel(timestamp). Vertices are returned
+        %     per-triangle (not de-duplicated by shared vertex).
+        function points = get_target_mesh_state(obj, target_index, timestamp, kwargs)
+            arguments
+                obj
+                target_index (1,1) double
+                timestamp (1,:) double = 0
+                kwargs.sim_timestamps (1,:) double = []
+            end
+
+            if obj.targets_ptr == 0
+                error("RadarSim:NoTargets", "Run() must be called before querying target mesh state.");
+            end
+
+            cell_size = obj.get_target_mesh_size(target_index);
+            num_ts = length(timestamp);
+
+            ts_ptr = libpointer("doublePtr", timestamp);
+            points_ptr = libpointer("doublePtr", zeros(3, 3, cell_size, num_ts));
+
+            sim_ts_ptr = libpointer("doublePtr", kwargs.sim_timestamps);
+            num_sim_ts = length(kwargs.sim_timestamps);
+
+            status = calllib('radarsimc', 'Get_Target_Mesh_State', obj.targets_ptr, target_index - 1, ...
+                ts_ptr, num_ts, sim_ts_ptr, num_sim_ts, points_ptr);
+            if status ~= 0
+                error('RadarSim:GetTargetMeshState', 'Get_Target_Mesh_State failed with error code %d', status);
+            end
+
+            points = reshape(points_ptr.Value, 3, 3, cell_size, num_ts);
+        end
+
         % Generates noise for the radar simulation.
         %
         % Parameters:

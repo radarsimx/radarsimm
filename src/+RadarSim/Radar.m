@@ -94,6 +94,46 @@ classdef Radar < handle
 
         end
 
+        % Get scene state
+        % Gets the global Tx/Rx channel locations and radar boresight
+        % direction(s) at query timestamp(s).
+        %
+        % Parameters:
+        %   timestamp (1,:) double: Query timestamp(s) in seconds (default: 0).
+        %
+        % Returns:
+        %   scene (struct): Struct with fields:
+        %     tx_locations (3, num_tx, K double): Global Tx channel locations.
+        %     rx_locations (3, num_rx, K double): Global Rx channel locations.
+        %     radar_boresight (3, K double): Global boresight direction.
+        %   where K = numel(timestamp).
+        %
+        % Note: for a radar with time-varying platform motion, this requires
+        % exactly one location/rotation sample per frame (one entry per
+        % frame_time element); otherwise the call fails.
+        function scene = get_scene_state(obj, timestamp)
+            arguments
+                obj
+                timestamp (1,:) double = 0
+            end
+
+            num_ts = length(timestamp);
+            ts_ptr = libpointer("doublePtr", timestamp);
+
+            tx_ptr = libpointer("singlePtr", zeros(3, obj.num_tx_, num_ts));
+            rx_ptr = libpointer("singlePtr", zeros(3, obj.num_rx_, num_ts));
+            bore_ptr = libpointer("singlePtr", zeros(3, num_ts));
+
+            status = calllib('radarsimc', 'Get_Scene_State', obj.radar_ptr, ts_ptr, num_ts, tx_ptr, rx_ptr, bore_ptr);
+            if status ~= 0
+                error('RadarSim:GetSceneState', 'Get_Scene_State failed with error code %d', status);
+            end
+
+            scene.tx_locations = reshape(tx_ptr.Value, 3, obj.num_tx_, num_ts);
+            scene.rx_locations = reshape(rx_ptr.Value, 3, obj.num_rx_, num_ts);
+            scene.radar_boresight = reshape(bore_ptr.Value, 3, num_ts);
+        end
+
         % Reset radar
         % Resets the radar system by freeing the radar pointer.
         function reset(obj)

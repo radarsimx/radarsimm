@@ -94,7 +94,7 @@ classdef Radar < handle
 
         end
 
-        % Get scene state
+        % Get radar state
         % Gets the global Tx/Rx channel locations and radar boresight
         % direction(s) at query timestamp(s).
         %
@@ -102,7 +102,7 @@ classdef Radar < handle
         %   timestamp (1,:) double: Query timestamp(s) in seconds (default: 0).
         %
         % Returns:
-        %   scene (struct): Struct with fields:
+        %   state (struct): Struct with fields:
         %     tx_locations (3, num_tx, K double): Global Tx channel locations.
         %     rx_locations (3, num_rx, K double): Global Rx channel locations.
         %     radar_boresight (3, K double): Global boresight direction.
@@ -111,7 +111,7 @@ classdef Radar < handle
         % Note: for a radar with time-varying platform motion, this requires
         % exactly one location/rotation sample per frame (one entry per
         % frame_time element); otherwise the call fails.
-        function scene = get_scene_state(obj, timestamp)
+        function state = get_radar_state(obj, timestamp)
             arguments
                 obj
                 timestamp (1,:) double = 0
@@ -124,14 +124,14 @@ classdef Radar < handle
             rx_ptr = libpointer("singlePtr", zeros(3, obj.num_rx_, num_ts));
             bore_ptr = libpointer("singlePtr", zeros(3, num_ts));
 
-            status = calllib('radarsimc', 'Get_Scene_State', obj.radar_ptr, ts_ptr, num_ts, tx_ptr, rx_ptr, bore_ptr);
+            status = calllib('radarsimc', 'Get_Radar_State', obj.radar_ptr, ts_ptr, num_ts, tx_ptr, rx_ptr, bore_ptr);
             if status ~= 0
-                error('RadarSim:GetSceneState', 'Get_Scene_State failed with error code %d', status);
+                error('RadarSim:GetRadarState', 'Get_Radar_State failed with error code %d', status);
             end
 
-            scene.tx_locations = reshape(tx_ptr.Value, 3, obj.num_tx_, num_ts);
-            scene.rx_locations = reshape(rx_ptr.Value, 3, obj.num_rx_, num_ts);
-            scene.radar_boresight = reshape(bore_ptr.Value, 3, num_ts);
+            state.tx_locations = reshape(tx_ptr.Value, 3, obj.num_tx_, num_ts);
+            state.rx_locations = reshape(rx_ptr.Value, 3, obj.num_rx_, num_ts);
+            state.radar_boresight = reshape(bore_ptr.Value, 3, num_ts);
         end
 
         % Reset radar

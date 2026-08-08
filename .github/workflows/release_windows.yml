@@ -137,7 +137,7 @@ jobs:
         shell: powershell
 
       - name: Archive built module
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: success()
         with:
           name: ${{ matrix.artifact_name }}
@@ -146,7 +146,7 @@ jobs:
           compression-level: 6
 
       - name: Upload build logs on failure
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: build-logs-${{ matrix.artifact_name }}
@@ -314,7 +314,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload packed artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: radarsimm_windows_all_builds
           path: |

@@ -94,7 +94,23 @@ classdef RxChannelTest < matlab.unittest.TestCase
         end
 
         function badLocationSizeIsRejected(testCase)
-            testCase.verifyError(@() RadarSim.RxChannel([0, 0]), ?MException);
+            testCase.verifyError(@() RadarSim.RxChannel([0, 0]), ...
+                'RadarSim:RxChannel:InvalidLocation');
+            testCase.verifyError(@() RadarSim.RxChannel([0, 0, 0, 0]), ...
+                'RadarSim:RxChannel:InvalidLocation');
+        end
+
+        function scalarLocationIsRejected(testCase)
+            % A (1,3) size in the arguments block would expand a scalar
+            % into [42, 42, 42] and build a channel out there without
+            % complaint.
+            testCase.verifyError(@() RadarSim.RxChannel(42), ...
+                'RadarSim:RxChannel:InvalidLocation');
+        end
+
+        function columnLocationIsRejected(testCase)
+            testCase.verifyError(@() RadarSim.RxChannel([0; 0; 0]), ...
+                'RadarSim:RxChannel:InvalidLocation');
         end
 
         function badPolarizationSizeIsRejected(testCase)

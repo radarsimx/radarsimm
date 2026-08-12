@@ -165,6 +165,17 @@ classdef ReceiverTest < matlab.unittest.TestCase
             testCase.verifyNumElements(rx.channels_, 1);
         end
 
+        function addRxchannelRejectsABareNumber(testCase)
+            % add_rxchannel declares its argument as RadarSim.RxChannel,
+            % and an arguments block converts what it can, so this only
+            % holds because RxChannel refuses to read a scalar as a
+            % location. The identifier is whatever the conversion failure
+            % is wrapped in, so only the failure itself is asserted.
+            rx = testCase.buildReceiver();
+
+            testCase.verifyError(@() rx.add_rxchannel(42), ?MException);
+        end
+
         % ---------------------------------------------------------------
         % Backend handle
         % ---------------------------------------------------------------

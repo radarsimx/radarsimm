@@ -51,7 +51,7 @@ classdef TxChannel < handle
         %   kwargs.amp (double): The amplitude.
         function obj = TxChannel(location, kwargs)
             arguments
-                location (1,3)
+                location
                 kwargs.polarization (1,3) = [0,0,1]
                 kwargs.delay = 0
                 kwargs.azimuth_angle = [-90, 90]
@@ -63,6 +63,17 @@ classdef TxChannel < handle
                 kwargs.mod_t = []
                 kwargs.phs = []
                 kwargs.amp = []
+            end
+
+            % Checked here rather than as a (1,3) size in the arguments
+            % block, which scalar-expands: declared that way, TxChannel(0)
+            % is silently accepted as a channel at [0, 0, 0], and so is
+            % any other scalar the caller passes by mistake. That also
+            % lets a Transmitter accept a bare number as a channel, since
+            % add_txchannel converts its argument to a TxChannel.
+            if ~isequal(size(location), [1, 3])
+                error('RadarSim:TxChannel:InvalidLocation', ...
+                    'location must be a 1-by-3 vector [x, y, z].');
             end
 
             obj.location_=location;

@@ -238,6 +238,17 @@ classdef TransmitterTest < matlab.unittest.TestCase
             testCase.verifyNumElements(tx.channels_, 1);
         end
 
+        function addTxchannelRejectsABareNumber(testCase)
+            % add_txchannel declares its argument as RadarSim.TxChannel,
+            % and an arguments block converts what it can, so this only
+            % holds because TxChannel refuses to read a scalar as a
+            % location. The identifier is whatever the conversion failure
+            % is wrapped in, so only the failure itself is asserted.
+            tx = testCase.buildTransmitter();
+
+            testCase.verifyError(@() tx.add_txchannel(42), ?MException);
+        end
+
         function channelDelayIsCollected(testCase)
             tx = testCase.buildTransmitter( ...
                 'channels', {RadarSim.TxChannel([0, 0, 0], 'delay', 1e-6)});

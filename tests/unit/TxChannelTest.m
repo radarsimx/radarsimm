@@ -187,8 +187,23 @@ classdef TxChannelTest < matlab.unittest.TestCase
         end
 
         function badLocationSizeIsRejected(testCase)
-            testCase.verifyError(@() RadarSim.TxChannel([0, 0]), ?MException);
-            testCase.verifyError(@() RadarSim.TxChannel([0, 0, 0, 0]), ?MException);
+            testCase.verifyError(@() RadarSim.TxChannel([0, 0]), ...
+                'RadarSim:TxChannel:InvalidLocation');
+            testCase.verifyError(@() RadarSim.TxChannel([0, 0, 0, 0]), ...
+                'RadarSim:TxChannel:InvalidLocation');
+        end
+
+        function scalarLocationIsRejected(testCase)
+            % A (1,3) size in the arguments block would expand a scalar
+            % into [42, 42, 42] and build a channel out there without
+            % complaint.
+            testCase.verifyError(@() RadarSim.TxChannel(42), ...
+                'RadarSim:TxChannel:InvalidLocation');
+        end
+
+        function columnLocationIsRejected(testCase)
+            testCase.verifyError(@() RadarSim.TxChannel([0; 0; 0]), ...
+                'RadarSim:TxChannel:InvalidLocation');
         end
 
         function badPolarizationSizeIsRejected(testCase)

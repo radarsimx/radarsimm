@@ -330,12 +330,12 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
             % view check and contributes nothing.
             %
             % Its frame starts a microsecond before the victim's, the way
-            % two unsynchronized radars would. That is also what keeps the
-            % result reproducible: with both frames starting together, the
-            % interferer's signal reaches the victim's first sample before
-            % its own first pulse begins, and the backend indexes its
-            % pulse arrays at -1 there (the guards in
-            % simulator_interference.cpp are commented out), so that one
+            % two unsynchronized radars would. That also keeps the result
+            % reproducible on backends built before the index guards in
+            % simulator_interference.cpp were restored: with both frames
+            % starting together, the interferer's signal reaches the
+            % victim's first sample before its own first pulse begins, and
+            % those builds index its pulse arrays at -1 there, so that one
             % sample comes out as whatever the heap holds.
             radar = testCase.buildRadar();
             interferer = testCase.buildRadar( ...

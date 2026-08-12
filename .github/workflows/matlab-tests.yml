@@ -7,8 +7,9 @@ name: MATLAB Tests
 #
 #   tests/unit         Pure MATLAB. Runs without the compiled backend, across
 #                      several MATLAB releases.
-#   tests/integration  Drives the real simulator. The radarsimc library is
-#                      built from the radarsimlib submodule first, staged into
+#   tests/integration  Drives the real simulator on Windows, the platform
+#                      RadarSimM supports. The radarsimc library is built from
+#                      the radarsimlib submodule first, staged into
 #                      src/+RadarSim, and then the whole suite is run against
 #                      it.
 #
@@ -79,7 +80,11 @@ jobs:
     # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
     # not expose to workflows triggered by pull requests from forks.
     if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    # Windows is the platform RadarSimM supports: radarsim.h exports through
+    # __declspec(dllexport) there, which MATLAB's loadlibrary understands. The
+    # Linux expansion, __attribute__((visibility("default"))), makes
+    # loadlibrary fail to generate its thunk file.
+    runs-on: windows-2025
     timeout-minutes: 90
 
     steps:
@@ -90,48 +95,55 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake
-
       - name: Display build information
+        shell: cmd
         run: |
-          echo "::group::Toolchain"
+          echo ::group::Toolchain
           cmake --version
-          gcc --version
-          echo "::endgroup::"
+          echo ::endgroup::
 
       - name: Build radarsimc
-        working-directory: radarsimlib
-        # build.sh is not checked in with the executable bit set, so it is
-        # invoked through bash rather than directly.
-        run: bash build.sh --arch=cpu --test=off
+        shell: cmd
+        run: .\build_win.bat --arch cpu
 
       - name: Stage radarsimc into the RadarSim package
+        shell: pwsh
         run: |
-          set -euo pipefail
+          $ErrorActionPreference = 'Stop'
 
-          lib=$(find radarsimlib -type f -name 'libradarsimc.so' | head -n 1)
-          if [ -z "$lib" ]; then
-            echo "::error::libradarsimc.so was not produced by the build"
-            exit 1
-          fi
+          $lib = Get-ChildItem -Path radarsimlib -Recurse -Filter 'radarsimc.dll' |
+              Select-Object -First 1
+          if (-not $lib) {
+              Write-Output '::error::radarsimc.dll was not produced by the build'
+              exit 1
+          }
 
-          header=radarsimlib/src/includes/radarsim.h
-          if [ ! -f "$header" ]; then
-            echo "::error::radarsim.h not found at $header"
-            exit 1
-          fi
+          $header = 'radarsimlib\src\includes\radarsim.h'
+          if (-not (Test-Path $header)) {
+              Write-Output "::error::radarsim.h not found at $header"
+              exit 1
+          }
 
-          # MATLAB's loadlibrary resolves 'radarsimc' to radarsimc.so, so the
-          # library is staged under that name next to the header.
-          cp "$lib" "src/+RadarSim/radarsimc.so"
-          cp "$header" "src/+RadarSim/radarsim.h"
+          Copy-Item $lib.FullName 'src\+RadarSim\radarsimc.dll' -Force
+          Copy-Item $header 'src\+RadarSim\radarsim.h' -Force
 
-          echo "::group::Staged files"
-          ls -l "src/+RadarSim/radarsimc.so" "src/+RadarSim/radarsim.h"
-          echo "::endgroup::"
+          Write-Output '::group::Staged files'
+          Get-ChildItem 'src\+RadarSim\radarsimc.dll', 'src\+RadarSim\radarsim.h'
+          Write-Output '::endgroup::'
+
+      - name: Locate MinGW for loadlibrary
+        shell: pwsh
+        # loadlibrary compiles a thunk file, so MATLAB needs a C compiler. Point
+        # it at the runner's MinGW when one is present; otherwise MATLAB falls
+        # back to the Visual Studio installation on the image.
+        run: |
+          foreach ($candidate in @('C:\mingw64', 'C:\ProgramData\mingw64\mingw64', 'C:\msys64\mingw64')) {
+              if (Test-Path (Join-Path $candidate 'bin\gcc.exe')) {
+                  "MW_MINGW64_LOC=$candidate" | Out-File -FilePath $env:GITHUB_ENV -Append
+                  Write-Output "Using MinGW at $candidate"
+                  break
+              }
+          }
 
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3
@@ -163,6 +175,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: radarsimc-build-logs
-          path: radarsimlib/build_logs/
+          path: |
+            radarsimlib/build_logs/
+            *.log
           if-no-files-found: ignore
           retention-days: 14

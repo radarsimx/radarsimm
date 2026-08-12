@@ -56,7 +56,8 @@ framework, split into two tiers:
 - `tests/integration` — drives the real simulator end to end: baseband
   shape and timestamps, range-FFT peaks against known target ranges, noise,
   real vs. complex baseband, ray-traced mesh targets, and interference.
-  Requires `radarsimc` and `radarsim.h` in `src/+RadarSim`.
+  Requires `radarsimc` and `radarsim.h` in `src/+RadarSim`, so it runs on
+  Windows, where `loadlibrary` can parse the exported C API.
 
 Run everything from the repository root:
 
@@ -82,7 +83,8 @@ matlab -batch "run_tests('unit')"
 
 The [`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow runs both
 tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions):
-the unit tests against R2022b, R2024b, and the latest MATLAB release, and a
-second job that builds `radarsimc` from the `radarsimlib` submodule, stages it
-into `src/+RadarSim`, and then runs the full suite against that build. JUnit
-results and Cobertura coverage are uploaded as build artifacts.
+the unit tests on Linux against R2022b, R2024b, and the latest MATLAB release,
+and a second job on Windows that builds `radarsimc` from the `radarsimlib`
+submodule with `build_win.bat`, stages it into `src/+RadarSim`, and then runs
+the full suite against that build. JUnit results and Cobertura coverage are
+uploaded as build artifacts.

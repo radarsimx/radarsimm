@@ -47,33 +47,42 @@ Radar Simulator for MATLAB.
 
 ## Testing
 
-Unit tests live in `tests/` and are written with the MATLAB unit testing
-framework. They cover the parts of the package implemented in pure MATLAB —
-the Tx/Rx channels, the point and mesh targets, the license guards, and the
-public class API — so the suite runs without the compiled `radarsimc`
-backend.
+Tests live in `tests/` and are written with the MATLAB unit testing
+framework, split into two tiers:
 
-Run the full suite from the repository root:
+- `tests/unit` — pure MATLAB. Covers the Tx/Rx channels, the point and mesh
+  targets, the license guards, and the public class API. Runs without the
+  compiled `radarsimc` backend.
+- `tests/integration` — drives the real simulator end to end: baseband
+  shape and timestamps, range-FFT peaks against known target ranges, noise,
+  real vs. complex baseband, ray-traced mesh targets, and interference.
+  Requires `radarsimc` and `radarsim.h` in `src/+RadarSim`.
+
+Run everything from the repository root:
 
 ```matlab
 run_tests
 ```
 
-Run a single test class:
+Run one tier, or a single test class:
 
 ```matlab
+run_tests('unit')
+
 addpath('src');
-runtests('tests/TxChannelTest.m')
+runtests('tests/unit/TxChannelTest.m')
 ```
 
 Or from a shell:
 
 ```bash
 matlab -batch "run_tests"
+matlab -batch "run_tests('unit')"
 ```
 
-Every push and pull request also runs the suite on GitHub Actions through the
-[`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow, which uses
-[matlab-actions](https://github.com/matlab-actions) to test against R2022b,
-R2024b, and the latest MATLAB release. JUnit results and Cobertura coverage
-are uploaded as build artifacts.
+The [`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow runs both
+tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions):
+the unit tests against R2022b, R2024b, and the latest MATLAB release, and a
+second job that builds `radarsimc` from the `radarsimlib` submodule, stages it
+into `src/+RadarSim`, and then runs the full suite against that build. JUnit
+results and Cobertura coverage are uploaded as build artifacts.

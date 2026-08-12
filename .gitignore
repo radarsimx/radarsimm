@@ -8,6 +8,8 @@ src/radarsimc.dll
 src/+RadarSim/radarsim.h
 src/+RadarSim/radarsimc.lib
 src/+RadarSim/radarsimc.dll
+src/+RadarSim/radarsimc.so
+src/+RadarSim/radarsimc.dylib
 
 # Test and coverage reports
 /test-results

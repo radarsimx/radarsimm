@@ -78,8 +78,17 @@ classdef CodeAnalyzerTest < matlab.unittest.TestCase
 
     methods (Access = private)
 
-        function root = repoRoot(~)
-            root = fileparts(fileparts(mfilename('fullpath')));
+        % Walks up from this file until it finds the folder holding the
+        % RadarSim package, so the tests do not depend on how deeply they
+        % are nested under tests/.
+        function root = repoRoot(testCase)
+            root = fileparts(mfilename('fullpath'));
+            while ~isfolder(fullfile(root, 'src', '+RadarSim'))
+                parent = fileparts(root);
+                testCase.assertNotEqual(parent, root, ...
+                    'Could not locate the repository root from the test file.');
+                root = parent;
+            end
         end
 
         % Collects every MATLAB file that ships with the project.
@@ -87,7 +96,9 @@ classdef CodeAnalyzerTest < matlab.unittest.TestCase
             root = testCase.repoRoot();
 
             folders = {root, fullfile(root, 'src'), ...
-                fullfile(root, 'src', '+RadarSim'), fullfile(root, 'tests')};
+                fullfile(root, 'src', '+RadarSim'), ...
+                fullfile(root, 'tests', 'unit'), ...
+                fullfile(root, 'tests', 'integration')};
 
             files = {};
             for k = 1:numel(folders)

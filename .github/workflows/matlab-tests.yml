@@ -1,11 +1,16 @@
 name: MATLAB Tests
 
-# GitHub Actions workflow that runs the RadarSimM unit test suite with the
-# official MATLAB actions (https://github.com/matlab-actions).
+# GitHub Actions workflow that runs the RadarSimM test suite with the official
+# MATLAB actions (https://github.com/matlab-actions).
 #
-# The tests in tests/ only exercise the parts of the package written in pure
-# MATLAB, so they run without the compiled radarsimc backend, which is not
-# redistributed in this repository.
+# Two tiers of tests:
+#
+#   tests/unit         Pure MATLAB. Runs without the compiled backend, across
+#                      several MATLAB releases.
+#   tests/integration  Drives the real simulator. The radarsimc library is
+#                      built from the radarsimlib submodule first, staged into
+#                      src/+RadarSim, and then the whole suite is run against
+#                      it.
 #
 # radarsimx/radarsimm is a public repository, so MATLAB runs on GitHub-hosted
 # runners without a batch licensing token.
@@ -25,8 +30,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: MATLAB ${{ matrix.release }}
+  unit-tests:
+    name: Unit tests (MATLAB ${{ matrix.release }})
     # Branches in this repository are already covered by the push event, so
     # only run the pull_request event for pull requests opened from forks.
     if: >-
@@ -50,7 +55,89 @@ jobs:
           release: ${{ matrix.release }}
           cache: true
 
-      - name: Run tests
+      - name: Run unit tests
+        uses: matlab-actions/run-tests@v3
+        with:
+          source-folder: src
+          select-by-folder: tests/unit
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-results-${{ matrix.release }}
+          path: |
+            test-results/
+            code-coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
+  integration-tests:
+    name: Build radarsimc and run integration tests
+    # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
+    # not expose to workflows triggered by pull requests from forks.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v7
+        with:
+          ssh-key: ${{ secrets.RADARSIMCPP }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Display build information
+        run: |
+          echo "::group::Toolchain"
+          cmake --version
+          gcc --version
+          echo "::endgroup::"
+
+      - name: Build radarsimc
+        working-directory: radarsimlib
+        run: ./build.sh --arch=cpu --test=off
+
+      - name: Stage radarsimc into the RadarSim package
+        run: |
+          set -euo pipefail
+
+          lib=$(find radarsimlib -type f -name 'libradarsimc.so' | head -n 1)
+          if [ -z "$lib" ]; then
+            echo "::error::libradarsimc.so was not produced by the build"
+            exit 1
+          fi
+
+          header=radarsimlib/src/includes/radarsim.h
+          if [ ! -f "$header" ]; then
+            echo "::error::radarsim.h not found at $header"
+            exit 1
+          fi
+
+          # MATLAB's loadlibrary resolves 'radarsimc' to radarsimc.so, so the
+          # library is staged under that name next to the header.
+          cp "$lib" "src/+RadarSim/radarsimc.so"
+          cp "$header" "src/+RadarSim/radarsim.h"
+
+          echo "::group::Staged files"
+          ls -l "src/+RadarSim/radarsimc.so" "src/+RadarSim/radarsim.h"
+          echo "::endgroup::"
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: R2024b
+          cache: true
+
+      - name: Run unit and integration tests
         uses: matlab-actions/run-tests@v3
         with:
           source-folder: src
@@ -62,9 +149,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-${{ matrix.release }}
+          name: integration-test-results
           path: |
             test-results/
             code-coverage/
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: radarsimc-build-logs
+          path: radarsimlib/build_logs/
+          if-no-files-found: ignore
           retention-days: 14

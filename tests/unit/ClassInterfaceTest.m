@@ -109,7 +109,7 @@ classdef ClassInterfaceTest < matlab.unittest.TestCase
         function packageContainsOnlyDocumentedClasses(testCase)
             % Every class shipped in +RadarSim should have a matching page
             % under docs/ so the published API reference stays complete.
-            repo_root = fileparts(fileparts(mfilename('fullpath')));
+            repo_root = testCase.repoRoot();
 
             for name = testCase.classNames()
                 short_name = extractAfter(name, "RadarSim.");
@@ -122,6 +122,19 @@ classdef ClassInterfaceTest < matlab.unittest.TestCase
     end
 
     methods (Access = private)
+
+        % Walks up from this file until it finds the folder holding the
+        % RadarSim package, so the tests do not depend on how deeply they
+        % are nested under tests/.
+        function root = repoRoot(testCase)
+            root = fileparts(mfilename('fullpath'));
+            while ~isfolder(fullfile(root, 'src', '+RadarSim'))
+                parent = fileparts(root);
+                testCase.assertNotEqual(parent, root, ...
+                    'Could not locate the repository root from the test file.');
+                root = parent;
+            end
+        end
 
         function names = classNames(~)
             names = ["RadarSim.Transmitter", "RadarSim.Receiver", ...

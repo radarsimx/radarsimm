@@ -17,8 +17,9 @@ function results = run_tests(suite)
     %
     % Parameters:
     %   suite (char): Which tests to run (default: 'all').
-    %     'unit'        - tests/unit, pure MATLAB. Does not require the
-    %                     compiled backend, but runs with it when present.
+    %     'unit'        - tests/unit. Runs without the compiled backend;
+    %                     the checks that inspect radarsimc skip
+    %                     themselves when it is not staged.
     %     'integration' - tests/integration, needs radarsimc and
     %                     radarsim.h in src/+RadarSim.
     %     'all'         - both.

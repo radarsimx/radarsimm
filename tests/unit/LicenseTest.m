@@ -17,7 +17,17 @@ classdef LicenseTest < matlab.unittest.TestCase
     %
     % These tests cover the guard clauses that run before any call into the
     % radarsimc shared library, so they do not need the library to be
-    % installed. They are skipped if the library happens to be loaded.
+    % installed. They are skipped if the library happens to be loaded,
+    % which is the only honest thing to do: the branch they describe is
+    % unreachable once radarsimc is in the process, and nothing unloads it
+    % again (see RadarSim.Radar.delete).
+    %
+    % That makes them order-sensitive. RadarsimcBackendTest loads the
+    % library, and runtests walks tests/unit alphabetically, so this file
+    % has to sort before every file that does. CodeAnalyzerTest checks
+    % that so a future test file cannot silently switch these off.
+    % RadarsimcBackendTest covers the other side of the same guards, the
+    % behavior once the library is loaded.
 
     methods (TestMethodSetup)
         function skipWhenLibraryIsLoaded(testCase)

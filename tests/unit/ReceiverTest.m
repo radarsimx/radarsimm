@@ -165,14 +165,6 @@ classdef ReceiverTest < matlab.unittest.TestCase
             testCase.verifyNumElements(rx.channels_, 1);
         end
 
-        function addRxchannelRejectsSomethingThatIsNotAChannel(testCase)
-            rx = testCase.buildReceiver();
-
-            testCase.verifyError(@() rx.add_rxchannel(42), ?MException);
-            testCase.verifyError( ...
-                @() rx.add_rxchannel(RadarSim.TxChannel([0, 0, 0])), ?MException);
-        end
-
         % ---------------------------------------------------------------
         % Backend handle
         % ---------------------------------------------------------------

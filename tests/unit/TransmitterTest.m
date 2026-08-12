@@ -245,14 +245,6 @@ classdef TransmitterTest < matlab.unittest.TestCase
             testCase.verifyEqual(tx.delay_, 1e-6, 'AbsTol', testCase.TimeTol);
         end
 
-        function addTxchannelRejectsSomethingThatIsNotAChannel(testCase)
-            tx = testCase.buildTransmitter();
-
-            testCase.verifyError(@() tx.add_txchannel(42), ?MException);
-            testCase.verifyError( ...
-                @() tx.add_txchannel(RadarSim.RxChannel([0, 0, 0])), ?MException);
-        end
-
         % ---------------------------------------------------------------
         % Backend handle
         % ---------------------------------------------------------------

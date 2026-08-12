@@ -2,6 +2,8 @@
 
 <img src="https://raw.githubusercontent.com/radarsimx/.github/refs/heads/main/profile/radarsimm.svg" alt="logo" width="200"/>
 
+[![MATLAB Tests](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests.yml/badge.svg)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests.yml)
+
 Radar Simulator for MATLAB.
 
 ## Introdcution
@@ -42,3 +44,53 @@ Radar Simulator for MATLAB.
 
 - Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
 - Try the files in `examples`.
+
+## Testing
+
+Tests live in `tests/` and are written with the MATLAB unit testing
+framework, split into two tiers:
+
+- `tests/unit` — pure MATLAB. Covers the Tx/Rx channels, the point and mesh
+  targets, the license guards, and the public class API. Runs without the
+  compiled `radarsimc` backend.
+- `tests/integration` — drives the real simulator end to end: baseband
+  shape and timestamps, range-FFT peaks against known target ranges, noise,
+  real vs. complex baseband, ray-traced mesh targets, and interference.
+  Requires `radarsimc` and `radarsim.h` in `src/+RadarSim`, so it runs on
+  Windows, where `loadlibrary` can parse the exported C API.
+
+Run everything from the repository root:
+
+```matlab
+run_tests
+```
+
+Run one tier, or a single test class:
+
+```matlab
+run_tests('unit')
+
+addpath('src');
+runtests('tests/unit/TxChannelTest.m')
+```
+
+Or from a shell:
+
+```bash
+matlab -batch "run_tests"
+matlab -batch "run_tests('unit')"
+```
+
+The [`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow runs both
+tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions):
+the unit tests on Linux against R2022b, R2024b, and the latest MATLAB release,
+and a second job on Windows that builds `radarsimc` from the `radarsimlib`
+submodule with `build_win.bat --arch cpu --license on`, stages it into
+`src/+RadarSim` together with the license from the `TEST_LICENSE` secret
+(written as `license_RadarSimM_CI.lic`), and then runs the full suite against
+that build. JUnit results and Cobertura coverage are uploaded as build
+artifacts.
+
+The build job needs two repository secrets: `RADARSIMCPP` (deploy key for the
+`radarsimlib`/`radarsimcpp` submodules) and `TEST_LICENSE` (the RadarSimM
+license used for the licensed build).

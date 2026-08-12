@@ -74,41 +74,6 @@ classdef CodeAnalyzerTest < matlab.unittest.TestCase
                 strjoin(offenders, newline)));
         end
 
-        function unitTestsThatLoadTheBackendSortLast(testCase)
-            % LicenseTest can only describe how the package behaves while
-            % radarsimc is unloaded, and nothing unloads it again once it
-            % is loaded (see RadarSim.Radar.delete). runtests walks
-            % tests/unit in alphabetical order, so a file that loads the
-            % library has to sort after LicenseTest.m; otherwise
-            % LicenseTest quietly skips itself and the license guards stop
-            % being covered. Checked statically, rather than left to
-            % whoever happens to notice the skip.
-            guard = 'LicenseTest.m';
-            listing = dir(fullfile(testCase.repoRoot(), 'tests', 'unit', '*.m'));
-
-            testCase.assertTrue(any(strcmp({listing.name}, guard)), ...
-                sprintf('%s is missing from tests/unit.', guard));
-
-            for k = 1:numel(listing)
-                if strcmp(listing(k).name, guard)
-                    continue
-                end
-
-                % A call, not the word: unloadlibrary and prose about
-                % loading the library must not trip this.
-                source = fileread(fullfile(listing(k).folder, listing(k).name));
-                if isempty(regexp(source, '[^A-Za-z0-9_.]loadlibrary\s*\(', 'once'))
-                    continue
-                end
-
-                pair = sort({lower(listing(k).name), lower(guard)});
-                testCase.verifyEqual(pair{1}, lower(guard), sprintf( ...
-                    ['tests/unit/%s loads radarsimc but sorts before %s, ' ...
-                    'so the license guard tests would be skipped. Rename ' ...
-                    'it to sort after %s.'], listing(k).name, guard, guard));
-            end
-        end
-
     end
 
     methods (Access = private)

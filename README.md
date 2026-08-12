@@ -51,13 +51,15 @@ Tests live in `tests/` and are written with the MATLAB unit testing
 framework, split into two tiers:
 
 - `tests/unit` — covers the Tx/Rx channels, the point and mesh targets, the
-  license guards, and the public class API, plus the seam between the MATLAB
-  wrappers and the backend: that `loadlibrary` can parse `radarsim.h`, that
-  the header and `radarsimc` agree, and that every function name the classes
-  hand to `calllib` is actually exported. The backend-facing checks skip
-  themselves when `radarsimc` has not been staged into `src/+RadarSim`, so
-  the tier still runs on a bare checkout. CI stages it and runs the tier on
-  every supported MATLAB release, which is what makes a header that only the
+  license guards, and the public class API, plus the transmitter, receiver
+  and radar themselves: the waveform bookkeeping the `Transmitter`
+  constructor does before it reaches the backend, the noise bandwidth a
+  `Receiver` derives from its baseband type, the geometry and timestamp grid
+  a `Radar` assembles, and the backend handles all three allocate and free.
+  Those classes load `radarsimc` in their constructors, so their tests skip
+  themselves when it has not been staged into `src/+RadarSim` and the tier
+  still runs on a bare checkout. CI stages it and runs the tier on every
+  supported MATLAB release, which is what makes a header that only the
   oldest release chokes on show up before a release rather than after.
 - `tests/integration` — drives the real simulator end to end: baseband
   shape and timestamps, range-FFT peaks against known target ranges, noise,

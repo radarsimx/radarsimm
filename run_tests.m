@@ -18,8 +18,8 @@ function results = run_tests(suite)
     % Parameters:
     %   suite (char): Which tests to run (default: 'all').
     %     'unit'        - tests/unit. Runs without the compiled backend;
-    %                     the checks that inspect radarsimc skip
-    %                     themselves when it is not staged.
+    %                     the classes that need radarsimc skip their
+    %                     tests when it is not staged.
     %     'integration' - tests/integration, needs radarsimc and
     %                     radarsim.h in src/+RadarSim.
     %     'all'         - both.

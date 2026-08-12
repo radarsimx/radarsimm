@@ -36,14 +36,25 @@ classdef RxChannel < handle
         %   kwargs.elevation_pattern (1,2 double): The elevation pattern (default: [0, 0]).
         function obj = RxChannel(location, kwargs)
             arguments
-                location (1,3)
+                location
                 kwargs.polarization (1,3) = [0,0,1]
                 kwargs.azimuth_angle = [-90, 90]
                 kwargs.azimuth_pattern = [0, 0]
                 kwargs.elevation_angle = [-90, 90]
                 kwargs.elevation_pattern = [0, 0]
             end
-            
+
+            % Checked here rather than as a (1,3) size in the arguments
+            % block, which scalar-expands: declared that way, RxChannel(0)
+            % is silently accepted as a channel at [0, 0, 0], and so is
+            % any other scalar the caller passes by mistake. That also
+            % lets a Receiver accept a bare number as a channel, since
+            % add_rxchannel converts its argument to an RxChannel.
+            if ~isequal(size(location), [1, 3])
+                error('RadarSim:RxChannel:InvalidLocation', ...
+                    'location must be a 1-by-3 vector [x, y, z].');
+            end
+
             obj.location_ = location;
             obj.polarization_ = kwargs.polarization;
 

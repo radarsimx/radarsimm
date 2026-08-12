@@ -231,7 +231,7 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
             target_range = 60;
             gate_delay = 2 * target_range / testCase.C;
 
-            radar = testCase.buildRadar('complex', gate_delay);
+            radar = testCase.buildRadar('gate_delay', gate_delay);
             targets = {RadarSim.PointTarget([target_range, 0, 0], [0, 0, 0], 20)};
 
             simc = testCase.runSimulation(radar, targets, 'noise', false);
@@ -244,7 +244,7 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
         end
 
         function realBasebandTypeProducesRealSamples(testCase)
-            radar = testCase.buildRadar('real');
+            radar = testCase.buildRadar('bb_type', 'real');
             targets = {RadarSim.PointTarget([60, 0, 0], [0, 0, 0], 20)};
 
             testCase.verifyEqual(radar.rx_.noise_bandwidth_, testCase.Fs / 2);
@@ -322,15 +322,35 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
         % ---------------------------------------------------------------
 
         function interferingRadarProducesAnInterferenceMatrix(testCase)
+            % The interferer stands 50 m down the boresight and is yawed
+            % around to face the victim, so each one sits in the other's
+            % field of view. Both parts matter: a co-located pair divides
+            % by zero in the 1/range term and fills the matrix with Inf,
+            % and an interferer that looks away is culled by the field of
+            % view check and contributes nothing.
+            %
+            % Its frame starts a microsecond before the victim's, the way
+            % two unsynchronized radars would. That is also what keeps the
+            % result reproducible: with both frames starting together, the
+            % interferer's signal reaches the victim's first sample before
+            % its own first pulse begins, and the backend indexes its
+            % pulse arrays at -1 there (the guards in
+            % simulator_interference.cpp are commented out), so that one
+            % sample comes out as whatever the heap holds.
             radar = testCase.buildRadar();
-            interferer = testCase.buildRadar();
+            interferer = testCase.buildRadar( ...
+                'location', [50, 0, 0], 'rotation', [180, 0, 0], ...
+                'frame_time', -1e-6);
             targets = {RadarSim.PointTarget([60, 0, 0], [0, 0, 0], 20)};
 
             simc = testCase.runSimulation(radar, targets, ...
                 'noise', false, 'interf', interferer);
 
             testCase.verifySize(simc.interference_, size(simc.baseband_));
-            testCase.verifyTrue(all(isfinite(simc.interference_(:))));
+            testCase.verifyTrue(all(isfinite(simc.interference_(:))), ...
+                'The interference must not contain NaN or Inf samples.');
+            testCase.verifyGreaterThan(max(abs(simc.interference_(:))), 0, ...
+                'A radar transmitting into the victim must leave a trace.');
         end
 
         % ---------------------------------------------------------------
@@ -363,14 +383,18 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
             pkg_dir = fullfile(root, 'src', '+RadarSim');
         end
 
-        % Builds a single-channel FMCW radar and registers the teardown
-        % that frees the backend resources in the reverse order.
-        function radar = buildRadar(testCase, bb_type, gate_delay)
-            if nargin < 2
-                bb_type = 'complex';
-            end
-            if nargin < 3
-                gate_delay = 0;
+        % Builds a single-channel FMCW radar on the given platform and
+        % registers the teardown that frees the backend resources in the
+        % reverse order. rotation is in degrees, like everywhere else in
+        % the package.
+        function radar = buildRadar(testCase, kwargs)
+            arguments
+                testCase
+                kwargs.bb_type = 'complex'
+                kwargs.gate_delay (1,1) = 0
+                kwargs.location (1,3) = [0, 0, 0]
+                kwargs.rotation (1,3) = [0, 0, 0]
+                kwargs.frame_time (1,1) = 0
             end
 
             tx = RadarSim.Transmitter(testCase.F, testCase.T, ...
@@ -381,11 +405,14 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
 
             rx = RadarSim.Receiver(testCase.Fs, 20, 500, 30, ...
                 'noise_figure', 12, ...
-                'bb_type', bb_type, ...
-                'gate_delay', gate_delay, ...
+                'bb_type', kwargs.bb_type, ...
+                'gate_delay', kwargs.gate_delay, ...
                 'channels', {RadarSim.RxChannel([0, 0, 0])});
 
-            radar = RadarSim.Radar(tx, rx);
+            radar = RadarSim.Radar(tx, rx, ...
+                'frame_time', kwargs.frame_time, ...
+                'location', kwargs.location, ...
+                'rotation', kwargs.rotation);
 
             % Teardown runs last-in-first-out, so the radar is released
             % before the transmitter and receiver it was built from.

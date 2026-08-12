@@ -77,8 +77,10 @@ classdef Radar < handle
 
             radar_loc_ptr=libpointer("singlePtr",kwargs.location);
             radar_spd_ptr=libpointer("singlePtr",kwargs.speed);
-            radar_rot_ptr=libpointer("singlePtr",kwargs.rotation);
-            radar_rrt_ptr=libpointer("singlePtr",kwargs.rotation_rate);
+            % Create_Radar takes radians, and the rest of the package takes
+            % its angles in degrees.
+            radar_rot_ptr=libpointer("singlePtr",kwargs.rotation/180*pi);
+            radar_rrt_ptr=libpointer("singlePtr",kwargs.rotation_rate/180*pi);
 
             obj.radar_ptr=calllib('radarsimc', 'Create_Radar', obj.tx_.tx_ptr, obj.rx_.rx_ptr, frame_start_time_ptr, length(obj.frame_start_time_), radar_loc_ptr, radar_spd_ptr, radar_rot_ptr, radar_rrt_ptr);
 

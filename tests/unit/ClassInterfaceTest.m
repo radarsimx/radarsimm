@@ -19,7 +19,9 @@ classdef ClassInterfaceTest < matlab.unittest.TestCase
     % shared library in their constructors, so they cannot be instantiated
     % without the compiled backend. These tests inspect their class
     % metadata instead, which still catches syntax errors, renamed or
-    % removed properties, and accidentally hidden methods.
+    % removed properties, and accidentally hidden methods, and holds on a
+    % checkout with no backend staged. TransmitterTest, ReceiverTest and
+    % RadarTest exercise the three that can be built.
 
     methods (Test)
 

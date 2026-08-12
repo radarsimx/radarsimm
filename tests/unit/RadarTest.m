@@ -29,10 +29,9 @@ classdef RadarTest < matlab.unittest.TestCase
     % unlicensed build allows, so the tests pass with or without a
     % license.
     %
-    % Loading radarsimc is irreversible for the rest of the MATLAB session
-    % (see RadarSim.Radar.delete), and LicenseTest describes behavior that
-    % is only reachable while it is unloaded. This file therefore has to
-    % sort after LicenseTest.m; CodeAnalyzerTest enforces that.
+    % radarsimc is never unloaded once a radar has loaded it: that tears
+    % the OpenMP runtime out from under the library. See
+    % RadarSim.Radar.delete.
 
     properties (Constant)
         F = [24.075e9, 24.175e9];   % Chirp start/stop frequency (Hz)

@@ -15,59 +15,15 @@
 classdef LicenseTest < matlab.unittest.TestCase
     % LicenseTest Unit tests for RadarSim.License.
     %
-    % These tests cover the guard clauses that run before any call into the
-    % radarsimc shared library, so they do not need the library to be
-    % installed. They are skipped if the library happens to be loaded,
-    % which is the only honest thing to do: the branch they describe is
-    % unreachable once radarsimc is in the process, and nothing unloads it
-    % again (see RadarSim.Radar.delete).
+    % These cover the argument validation that runs before any call into
+    % the radarsimc shared library, so they hold whether or not the
+    % library happens to be loaded and do not depend on the order the
+    % tier runs in.
     %
-    % That makes them order-sensitive. TransmitterTest, ReceiverTest and
-    % RadarTest all build real backend objects, whose constructors load
-    % the library, and runtests walks tests/unit alphabetically, so this
-    % file has to sort before every file that does. CodeAnalyzerTest
-    % checks that, so a future test file cannot silently switch these
-    % off.
-
-    methods (TestMethodSetup)
-        function skipWhenLibraryIsLoaded(testCase)
-            testCase.assumeFalse(libisloaded('radarsimc'), ...
-                'These tests describe the behavior when radarsimc is not loaded.');
-        end
-    end
+    % What the license manager reports once the library is loaded is
+    % covered by RadarSimulationTest.
 
     methods (Test)
-
-        function setLicenseRequiresLoadedLibrary(testCase)
-            testCase.verifyError(@() RadarSim.License.set_license(), ...
-                'RadarSim:License:LibraryNotLoaded');
-        end
-
-        function setLicenseWithPathRequiresLoadedLibrary(testCase)
-            lic_file = testCase.createLicenseFile();
-
-            testCase.verifyError(@() RadarSim.License.set_license(lic_file), ...
-                'RadarSim:License:LibraryNotLoaded');
-        end
-
-        function getInfoRequiresLoadedLibrary(testCase)
-            testCase.verifyError(@() RadarSim.License.get_info(), ...
-                'RadarSim:License:LibraryNotLoaded');
-        end
-
-        function setRequiresLoadedLibrary(testCase)
-            lic_file = testCase.createLicenseFile();
-
-            testCase.verifyError(@() RadarSim.License.set(lic_file), ...
-                'RadarSim:License:LibraryNotLoaded');
-        end
-
-        function setRequiresLoadedLibraryWithExplicitProduct(testCase)
-            lic_file = testCase.createLicenseFile();
-
-            testCase.verifyError(@() RadarSim.License.set(lic_file, 'RadarSimM'), ...
-                'RadarSim:License:LibraryNotLoaded');
-        end
 
         function setRejectsMissingFile(testCase)
             missing = fullfile(tempdir, 'license_RadarSimM_does_not_exist.lic');
@@ -75,6 +31,13 @@ classdef LicenseTest < matlab.unittest.TestCase
                 'The placeholder license file must not exist.');
 
             testCase.verifyError(@() RadarSim.License.set(missing), ?MException);
+        end
+
+        function setRejectsANonTextProductName(testCase)
+            lic_file = testCase.createLicenseFile();
+
+            testCase.verifyError(@() RadarSim.License.set(lic_file, 42), ...
+                ?MException);
         end
 
         function setLicenseRejectsNonTextInput(testCase)

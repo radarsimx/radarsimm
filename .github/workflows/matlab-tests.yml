@@ -104,7 +104,9 @@ jobs:
 
       - name: Build radarsimc
         working-directory: radarsimlib
-        run: ./build.sh --arch=cpu --test=off
+        # build.sh is not checked in with the executable bit set, so it is
+        # invoked through bash rather than directly.
+        run: bash build.sh --arch=cpu --test=off
 
       - name: Stage radarsimc into the RadarSim package
         run: |

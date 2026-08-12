@@ -20,9 +20,11 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
     % step of the CI workflow produces. They fail loudly when the library
     % is missing rather than being silently skipped.
     %
-    % The scenarios stay within the limits of an unlicensed build (one Tx
-    % channel, one Rx channel, at most two point targets, and meshes of at
-    % most eight triangles) so they pass against any build of the backend.
+    % CI builds the backend with license verification on and installs a
+    % license, but the scenarios deliberately stay within the limits of an
+    % unlicensed build (one Tx channel, one Rx channel, at most two point
+    % targets, and meshes of at most eight triangles) so they also pass
+    % against a build without a license.
 
     properties (Constant)
         F = [24.075e9, 24.175e9];   % Chirp start/stop frequency (Hz)
@@ -346,8 +348,10 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
 
             info = RadarSim.License.get_info();
 
-            testCase.verifyClass(info, 'string');
-            testCase.verifySize(info, [1, 1]);
+            % Assert on the shape rather than the text so license details
+            % never reach the build log.
+            testCase.verifyTrue(isstring(info) && isscalar(info), ...
+                'get_info must return a string scalar.');
         end
 
     end

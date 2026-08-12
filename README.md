@@ -85,6 +85,12 @@ The [`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow runs both
 tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions):
 the unit tests on Linux against R2022b, R2024b, and the latest MATLAB release,
 and a second job on Windows that builds `radarsimc` from the `radarsimlib`
-submodule with `build_win.bat`, stages it into `src/+RadarSim`, and then runs
-the full suite against that build. JUnit results and Cobertura coverage are
-uploaded as build artifacts.
+submodule with `build_win.bat --arch cpu --license on`, stages it into
+`src/+RadarSim` together with the license from the `TEST_LICENSE` secret
+(written as `license_RadarSimM_CI.lic`), and then runs the full suite against
+that build. JUnit results and Cobertura coverage are uploaded as build
+artifacts.
+
+The build job needs two repository secrets: `RADARSIMCPP` (deploy key for the
+`radarsimlib`/`radarsimcpp` submodules) and `TEST_LICENSE` (the RadarSimM
+license used for the licensed build).

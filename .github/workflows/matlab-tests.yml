@@ -104,7 +104,7 @@ jobs:
 
       - name: Build radarsimc
         shell: cmd
-        run: .\build_win.bat --arch cpu
+        run: .\build_win.bat --arch cpu --license on
 
       - name: Stage radarsimc into the RadarSim package
         shell: pwsh
@@ -130,6 +130,27 @@ jobs:
           Write-Output '::group::Staged files'
           Get-ChildItem 'src\+RadarSim\radarsimc.dll', 'src\+RadarSim\radarsim.h'
           Write-Output '::endgroup::'
+
+      - name: Install the CI license
+        shell: pwsh
+        env:
+          TEST_LICENSE: ${{ secrets.TEST_LICENSE }}
+        # RadarSim.License.set_license() activates every
+        # license_RadarSimM_*.lic it finds in the package directory, so the
+        # secret is written there under a name matching that pattern. The
+        # file is covered by the *.lic entry in .gitignore.
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if ([string]::IsNullOrWhiteSpace($env:TEST_LICENSE)) {
+              Write-Output '::error::The TEST_LICENSE secret is empty, so the licensed build cannot be tested.'
+              exit 1
+          }
+
+          $license = Join-Path (Get-Location) 'src\+RadarSim\license_RadarSimM_CI.lic'
+          [System.IO.File]::WriteAllText($license, $env:TEST_LICENSE)
+
+          Write-Output "Wrote $((Get-Item $license).Length) bytes to src\+RadarSim\license_RadarSimM_CI.lic"
 
       - name: Locate MinGW for loadlibrary
         shell: pwsh

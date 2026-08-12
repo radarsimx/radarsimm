@@ -42,7 +42,11 @@ classdef License
                 error('RadarSim:License:LibraryNotLoaded', ...
                     'radarsimc library must be loaded before activating license.');
             end
-            
+
+            if logical(calllib('radarsimc', 'Is_Licensed'))
+                return; % License is already active, no need to set again
+            end
+
             % If a specific file path is provided
             if ~isempty(lic_path) && strlength(lic_path) > 0
                 % Check if file exists

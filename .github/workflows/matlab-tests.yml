@@ -119,6 +119,18 @@ jobs:
       matrix:
         # Oldest supported release, a recent release, and the newest one.
         release: [R2022b, R2024b, latest]
+        include:
+          # run-tests@v3 builds its script around
+          # CodeCoveragePlugin.forFolder(..., 'MetricLevel', ...), which
+          # R2022b does not accept: the run errors out before a single test
+          # executes. Skip coverage there and keep the tests. The two newer
+          # releases cover the same source.
+          - release: R2022b
+            coverage: ''
+          - release: R2024b
+            coverage: code-coverage/coverage.xml
+          - release: latest
+            coverage: code-coverage/coverage.xml
 
     steps:
       - name: Checkout
@@ -170,7 +182,7 @@ jobs:
           source-folder: src
           select-by-folder: tests/unit
           test-results-junit: test-results/results.xml
-          code-coverage-cobertura: code-coverage/coverage.xml
+          code-coverage-cobertura: ${{ matrix.coverage }}
 
       - name: Upload test results
         if: always()

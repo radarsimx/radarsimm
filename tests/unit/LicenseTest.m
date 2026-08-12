@@ -22,12 +22,12 @@ classdef LicenseTest < matlab.unittest.TestCase
     % unreachable once radarsimc is in the process, and nothing unloads it
     % again (see RadarSim.Radar.delete).
     %
-    % That makes them order-sensitive. RadarsimcBackendTest loads the
-    % library, and runtests walks tests/unit alphabetically, so this file
-    % has to sort before every file that does. CodeAnalyzerTest checks
-    % that so a future test file cannot silently switch these off.
-    % RadarsimcBackendTest covers the other side of the same guards, the
-    % behavior once the library is loaded.
+    % That makes them order-sensitive. TransmitterTest, ReceiverTest and
+    % RadarTest all build real backend objects, whose constructors load
+    % the library, and runtests walks tests/unit alphabetically, so this
+    % file has to sort before every file that does. CodeAnalyzerTest
+    % checks that, so a future test file cannot silently switch these
+    % off.
 
     methods (TestMethodSetup)
         function skipWhenLibraryIsLoaded(testCase)

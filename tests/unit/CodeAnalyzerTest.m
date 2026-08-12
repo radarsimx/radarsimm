@@ -89,15 +89,23 @@ classdef CodeAnalyzerTest < matlab.unittest.TestCase
             testCase.assertTrue(any(strcmp({listing.name}, guard)), ...
                 sprintf('%s is missing from tests/unit.', guard));
 
+            % Calling loadlibrary is the obvious way in, but the usual one
+            % is indirect: these four constructors load radarsimc
+            % themselves. The class names are assembled here rather than
+            % written out so this file does not match its own pattern.
+            loaders = {'Transmitter', 'Receiver', 'RadarSimulator', 'Radar'};
+            pattern = ['[^A-Za-z0-9_.](loadlibrary|RadarSim\.(' ...
+                strjoin(loaders, '|') '))\s*\('];
+
             for k = 1:numel(listing)
                 if strcmp(listing(k).name, guard)
                     continue
                 end
 
-                % A call, not the word: unloadlibrary and prose about
-                % loading the library must not trip this.
+                % A call, not the word: unloadlibrary, quoted class names
+                % and prose about loading the library must not trip this.
                 source = fileread(fullfile(listing(k).folder, listing(k).name));
-                if isempty(regexp(source, '[^A-Za-z0-9_.]loadlibrary\s*\(', 'once'))
+                if isempty(regexp(source, pattern, 'once'))
                     continue
                 end
 

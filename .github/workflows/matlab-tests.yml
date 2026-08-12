@@ -3,15 +3,20 @@ name: MATLAB Tests
 # GitHub Actions workflow that runs the RadarSimM test suite with the official
 # MATLAB actions (https://github.com/matlab-actions).
 #
-# Two tiers of tests:
+# Everything runs on Windows, the platform RadarSimM supports: radarsim.h
+# exports through __declspec(dllexport) there, which MATLAB's loadlibrary
+# understands. The Linux expansion, __attribute__((visibility("default"))),
+# makes loadlibrary fail to generate its thunk file.
 #
-#   tests/unit         Pure MATLAB. Runs without the compiled backend, across
-#                      several MATLAB releases.
-#   tests/integration  Drives the real simulator on Windows, the platform
-#                      RadarSimM supports. The radarsimc library is built from
-#                      the radarsimlib submodule first, staged into
-#                      src/+RadarSim, and then the whole suite is run against
-#                      it.
+# radarsimc is built once from the radarsimlib submodule and shared with the
+# test jobs as a build artifact, so the release matrix does not pay for the
+# same build three times. Both tiers run against that build:
+#
+#   tests/unit         Class metadata, code analyzer, and the guard clauses
+#                      that run before any call into radarsimc. Runs across
+#                      several MATLAB releases with the library staged in
+#                      src/+RadarSim.
+#   tests/integration  Drives the real simulator end to end.
 #
 # radarsimx/radarsimm is a public repository, so MATLAB runs on GitHub-hosted
 # runners without a batch licensing token.
@@ -31,14 +36,83 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build-radarsimc:
+    name: Build radarsimc
+    # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
+    # not expose to workflows triggered by pull requests from forks. Both test
+    # jobs depend on this one, so they are skipped along with it.
+    if: github.event_name != 'pull_request'
+    runs-on: windows-2025
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v7
+        with:
+          ssh-key: ${{ secrets.RADARSIMCPP }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Display build information
+        shell: cmd
+        run: |
+          echo ::group::Toolchain
+          cmake --version
+          echo ::endgroup::
+
+      - name: Build radarsimc
+        shell: cmd
+        run: .\build_win.bat --arch cpu --license on
+
+      - name: Collect radarsimc and its header
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $lib = Get-ChildItem -Path radarsimlib -Recurse -Filter 'radarsimc.dll' |
+              Select-Object -First 1
+          if (-not $lib) {
+              Write-Output '::error::radarsimc.dll was not produced by the build'
+              exit 1
+          }
+
+          $header = 'radarsimlib\src\includes\radarsim.h'
+          if (-not (Test-Path $header)) {
+              Write-Output "::error::radarsim.h not found at $header"
+              exit 1
+          }
+
+          New-Item -ItemType Directory -Path 'radarsimc-dist' -Force | Out-Null
+          Copy-Item $lib.FullName 'radarsimc-dist\radarsimc.dll' -Force
+          Copy-Item $header 'radarsimc-dist\radarsim.h' -Force
+
+          Write-Output '::group::Collected files'
+          Get-ChildItem 'radarsimc-dist'
+          Write-Output '::endgroup::'
+
+      - name: Upload radarsimc
+        uses: actions/upload-artifact@v7
+        with:
+          name: radarsimc
+          path: radarsimc-dist/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: radarsimc-build-logs
+          path: |
+            radarsimlib/build_logs/
+            *.log
+          if-no-files-found: ignore
+          retention-days: 14
+
   unit-tests:
     name: Unit tests (MATLAB ${{ matrix.release }})
-    # Branches in this repository are already covered by the push event, so
-    # only run the pull_request event for pull requests opened from forks.
-    if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-latest
+    needs: build-radarsimc
+    runs-on: windows-2025
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -49,6 +123,40 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Stage radarsimc into the RadarSim package
+        uses: actions/download-artifact@v8
+        with:
+          name: radarsimc
+          path: src/+RadarSim
+
+      - name: Install the CI license
+        shell: pwsh
+        env:
+          TEST_LICENSE: ${{ secrets.TEST_LICENSE }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          if ([string]::IsNullOrWhiteSpace($env:TEST_LICENSE)) {
+              Write-Output '::error::The TEST_LICENSE secret is empty, so the licensed build cannot be tested.'
+              exit 1
+          }
+
+          $license = Join-Path (Get-Location) 'src\+RadarSim\license_RadarSimM_CI.lic'
+          [System.IO.File]::WriteAllText($license, $env:TEST_LICENSE)
+
+          Write-Output "Wrote $((Get-Item $license).Length) bytes to src\+RadarSim\license_RadarSimM_CI.lic"
+
+      - name: Locate MinGW for loadlibrary
+        shell: pwsh
+        run: |
+          foreach ($candidate in @('C:\mingw64', 'C:\ProgramData\mingw64\mingw64', 'C:\msys64\mingw64')) {
+              if (Test-Path (Join-Path $candidate 'bin\gcc.exe')) {
+                  "MW_MINGW64_LOC=$candidate" | Out-File -FilePath $env:GITHUB_ENV -Append
+                  Write-Output "Using MinGW at $candidate"
+                  break
+              }
+          }
 
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v3
@@ -76,60 +184,20 @@ jobs:
           retention-days: 14
 
   integration-tests:
-    name: Build radarsimc and run integration tests
-    # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
-    # not expose to workflows triggered by pull requests from forks.
-    if: github.event_name != 'pull_request'
-    # Windows is the platform RadarSimM supports: radarsim.h exports through
-    # __declspec(dllexport) there, which MATLAB's loadlibrary understands. The
-    # Linux expansion, __attribute__((visibility("default"))), makes
-    # loadlibrary fail to generate its thunk file.
+    name: Integration tests
+    needs: build-radarsimc
     runs-on: windows-2025
-    timeout-minutes: 90
+    timeout-minutes: 45
 
     steps:
-      - name: Checkout repository and submodules
+      - name: Checkout
         uses: actions/checkout@v7
-        with:
-          ssh-key: ${{ secrets.RADARSIMCPP }}
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Display build information
-        shell: cmd
-        run: |
-          echo ::group::Toolchain
-          cmake --version
-          echo ::endgroup::
-
-      - name: Build radarsimc
-        shell: cmd
-        run: .\build_win.bat --arch cpu --license on
 
       - name: Stage radarsimc into the RadarSim package
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-
-          $lib = Get-ChildItem -Path radarsimlib -Recurse -Filter 'radarsimc.dll' |
-              Select-Object -First 1
-          if (-not $lib) {
-              Write-Output '::error::radarsimc.dll was not produced by the build'
-              exit 1
-          }
-
-          $header = 'radarsimlib\src\includes\radarsim.h'
-          if (-not (Test-Path $header)) {
-              Write-Output "::error::radarsim.h not found at $header"
-              exit 1
-          }
-
-          Copy-Item $lib.FullName 'src\+RadarSim\radarsimc.dll' -Force
-          Copy-Item $header 'src\+RadarSim\radarsim.h' -Force
-
-          Write-Output '::group::Staged files'
-          Get-ChildItem 'src\+RadarSim\radarsimc.dll', 'src\+RadarSim\radarsim.h'
-          Write-Output '::endgroup::'
+        uses: actions/download-artifact@v8
+        with:
+          name: radarsimc
+          path: src/+RadarSim
 
       - name: Install the CI license
         shell: pwsh
@@ -172,11 +240,11 @@ jobs:
           release: R2024b
           cache: true
 
-      - name: Run unit and integration tests
+      - name: Run integration tests
         uses: matlab-actions/run-tests@v3
         with:
           source-folder: src
-          select-by-folder: tests
+          select-by-folder: tests/integration
           test-results-junit: test-results/results.xml
           code-coverage-cobertura: code-coverage/coverage.xml
 
@@ -189,15 +257,4 @@ jobs:
             test-results/
             code-coverage/
           if-no-files-found: warn
-          retention-days: 14
-
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: radarsimc-build-logs
-          path: |
-            radarsimlib/build_logs/
-            *.log
-          if-no-files-found: ignore
           retention-days: 14

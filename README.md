@@ -51,8 +51,9 @@ Tests live in `tests/` and are written with the MATLAB unit testing
 framework, split into two tiers:
 
 - `tests/unit` — pure MATLAB. Covers the Tx/Rx channels, the point and mesh
-  targets, the license guards, and the public class API. Runs without the
-  compiled `radarsimc` backend.
+  targets, the license guards, and the public class API. Runs with or without
+  the compiled `radarsimc` backend; CI stages the backend for it so the tier
+  is exercised against a complete package on every supported MATLAB release.
 - `tests/integration` — drives the real simulator end to end: baseband
   shape and timestamps, range-FFT peaks against known target ranges, noise,
   real vs. complex baseband, ray-traced mesh targets, and interference.
@@ -82,15 +83,19 @@ matlab -batch "run_tests('unit')"
 ```
 
 The [`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow runs both
-tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions):
-the unit tests on Linux against R2022b, R2024b, and the latest MATLAB release,
-and a second job on Windows that builds `radarsimc` from the `radarsimlib`
-submodule with `build_win.bat --arch cpu --license on`, stages it into
-`src/+RadarSim` together with the license from the `TEST_LICENSE` secret
-(written as `license_RadarSimM_CI.lic`), and then runs the full suite against
-that build. JUnit results and Cobertura coverage are uploaded as build
-artifacts.
+tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions).
+Everything runs on Windows, the only platform whose exported C API
+`loadlibrary` can parse. A first job builds `radarsimc` from the `radarsimlib`
+submodule with `build_win.bat --arch cpu --license on` and publishes the
+resulting `radarsimc.dll` and `radarsim.h` as a build artifact. Both test jobs
+then stage that artifact into `src/+RadarSim` together with the license from
+the `TEST_LICENSE` secret (written as `license_RadarSimM_CI.lic`), so the unit
+tier — run against R2022b, R2024b, and the latest MATLAB release — and the
+integration tier both test the same installed package layout users get. JUnit
+results and Cobertura coverage are uploaded as build artifacts.
 
 The build job needs two repository secrets: `RADARSIMCPP` (deploy key for the
 `radarsimlib`/`radarsimcpp` submodules) and `TEST_LICENSE` (the RadarSimM
-license used for the licensed build).
+license used for the licensed build). Neither is exposed to workflows
+triggered by pull requests from forks, so the whole workflow is skipped for
+those; pushes to a branch in this repository run it in full.

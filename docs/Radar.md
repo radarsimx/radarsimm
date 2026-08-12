@@ -43,7 +43,7 @@ Reset radar Resets the radar system by freeing the radar pointer.
 
 ### `delete(obj)`
 
-Delete radar Destructor for the Radar class. Frees the radar pointer and unloads the radar library if loaded.
+Delete radar Destructor for the Radar class. Frees the radar pointer and leaves radarsimc loaded for the rest of the MATLAB session.
 
 ---
 *Copyright (C) 2023 - 2026 RadarSimX LLC*

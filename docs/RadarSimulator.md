@@ -72,7 +72,7 @@ Resets the simulation by freeing targets.
 
 ### `delete(obj)`
 
-Destructor for the RadarSimulator class. Frees targets and unloads the 'radarsimc' library if loaded.
+Destructor for the RadarSimulator class. Frees the targets. radarsimc is deliberately left loaded: see RadarSim.Radar.delete.
 
 ---
 *Copyright (C) 2023 - 2026 RadarSimX LLC*

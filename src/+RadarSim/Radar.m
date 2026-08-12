@@ -137,25 +137,32 @@ classdef Radar < handle
         % Reset radar
         % Resets the radar system by freeing the radar pointer.
         function reset(obj)
-            if obj.radar_ptr~=0
+            if obj.radar_ptr~=0 && libisloaded('radarsimc')
                 calllib('radarsimc','Free_Radar',obj.radar_ptr);
             end
             obj.radar_ptr=0;
         end
 
         % Delete radar
-        % Destructor for the Radar class.
-        % Frees the radar pointer and unloads the radar library if loaded.
+        % Destructor for the Radar class. Frees the radar pointer and
+        % leaves radarsimc loaded for the rest of the MATLAB session.
         function delete(obj)
+            % Unloading radarsimc here used to crash MATLAB with an access
+            % violation, for two independent reasons:
+            %
+            %   - The CPU build of radarsimc links the OpenMP runtime.
+            %     Unloading it drops the last reference to vcomp140.dll
+            %     while that runtime's worker threads are still parked
+            %     inside it, so those threads run unmapped code.
+            %   - Every other object (transmitter, receiver, simulator)
+            %     holds a raw backend pointer. Unloading the library
+            %     invalidates them, and freeing one after a later reload
+            %     is a double free.
+            %
+            % A session that really has to release the library can call
+            % unloadlibrary('radarsimc') once every RadarSim object is
+            % cleared.
             obj.reset();
-            if libisloaded('radarsimc')
-                try
-                    unloadlibrary radarsimc;
-                catch exception
-                    msg = exception.message;
-                    % disp(msg);
-                end
-            end
         end
 
 

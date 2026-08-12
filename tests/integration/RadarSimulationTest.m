@@ -25,6 +25,14 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
     % unlicensed build (one Tx channel, one Rx channel, at most two point
     % targets, and meshes of at most eight triangles) so they also pass
     % against a build without a license.
+    %
+    % These tests never unload radarsimc. The CPU build links the OpenMP
+    % runtime, and unloading the library once a simulation has run tears
+    % vcomp140.dll out from under its parked worker threads, which crashes
+    % MATLAB with an access violation (see RadarSim.Radar.delete). The unit
+    % tests that describe the "library not loaded" behavior skip themselves
+    % when the library is loaded, so they simply do not apply once this
+    % class has run in the same MATLAB session.
 
     properties (Constant)
         F = [24.075e9, 24.175e9];   % Chirp start/stop frequency (Hz)
@@ -50,20 +58,6 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
                 sprintf(['No radarsimc shared library found in %s. Build ' ...
                 'the radarsimc library before running the integration ' ...
                 'tests.'], pkg_dir));
-        end
-    end
-
-    methods (TestClassTeardown)
-        function unloadCompiledLibrary(~)
-            % Leave the process without the library loaded so unit tests
-            % that describe the "library not loaded" behavior still apply,
-            % whatever order the suite runs in.
-            if libisloaded('radarsimc')
-                try
-                    unloadlibrary('radarsimc');
-                catch
-                end
-            end
         end
     end
 

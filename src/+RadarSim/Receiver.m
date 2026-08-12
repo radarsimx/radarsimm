@@ -133,7 +133,7 @@ classdef Receiver < handle
         % Reset the receiver
         % Resets the Receiver object, freeing any allocated resources.
         function reset(obj)
-            if obj.rx_ptr~=0
+            if obj.rx_ptr~=0 && libisloaded('radarsimc')
                 calllib('radarsimc','Free_Receiver',obj.rx_ptr);
             end
             obj.rx_ptr=0;
@@ -142,17 +142,10 @@ classdef Receiver < handle
         end
 
         % Delete the receiver
-        % Deletes the Receiver object and unloads the library if loaded.
+        % Deletes the Receiver object, freeing its backend resources.
+        % radarsimc is deliberately left loaded: see RadarSim.Radar.delete.
         function delete(obj)
             obj.reset();
-            if libisloaded('radarsimc')
-                try
-                    unloadlibrary radarsimc;
-                catch exception
-                    msg = exception.message;
-                    % disp(msg);
-                end
-            end
         end
 
 

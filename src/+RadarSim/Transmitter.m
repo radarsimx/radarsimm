@@ -215,7 +215,7 @@ classdef Transmitter < handle
         % Reset transmitter
         % Resets the Transmitter object, freeing any allocated resources.
         function reset(obj)
-            if obj.tx_ptr~=0
+            if obj.tx_ptr~=0 && libisloaded('radarsimc')
                 calllib('radarsimc','Free_Transmitter',obj.tx_ptr);
             end
 
@@ -225,17 +225,10 @@ classdef Transmitter < handle
         end
 
         % Delete transmitter
-        % Deletes the Transmitter object and unloads the library if loaded.
+        % Deletes the Transmitter object, freeing its backend resources.
+        % radarsimc is deliberately left loaded: see RadarSim.Radar.delete.
         function delete(obj)
             obj.reset();
-            if libisloaded('radarsimc')
-                try
-                    unloadlibrary radarsimc;
-                catch exception
-                    msg = exception.message;
-                    % disp(msg);
-                end
-            end
         end
 
 

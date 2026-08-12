@@ -54,7 +54,7 @@ Reset the receiver Resets the Receiver object, freeing any allocated resources.
 
 ### `delete(obj)`
 
-Delete the receiver Deletes the Receiver object and unloads the library if loaded.
+Delete the receiver Deletes the Receiver object, freeing its backend resources. radarsimc is deliberately left loaded: see RadarSim.Radar.delete.
 
 ---
 *Copyright (C) 2023 - 2026 RadarSimX LLC*

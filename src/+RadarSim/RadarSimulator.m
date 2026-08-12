@@ -324,24 +324,16 @@ classdef RadarSimulator < handle
 
         % Resets the simulation by freeing targets.
         function reset(obj)
-            if obj.targets_ptr~=0
+            if obj.targets_ptr~=0 && libisloaded('radarsimc')
                 calllib('radarsimc','Free_Targets',obj.targets_ptr);
             end
             obj.targets_ptr=0;
         end
 
-        % Destructor for the RadarSimulator class.
-        % Frees targets and unloads the 'radarsimc' library if loaded.
+        % Destructor for the RadarSimulator class. Frees the targets.
+        % radarsimc is deliberately left loaded: see RadarSim.Radar.delete.
         function delete(obj)
             obj.reset();
-            if libisloaded('radarsimc')
-                try
-                    unloadlibrary radarsimc;
-                catch exception
-                    msg = exception.message;
-                    % disp(msg);
-                end
-            end
         end
     end
 end

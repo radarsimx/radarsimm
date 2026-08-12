@@ -1,0 +1,70 @@
+name: MATLAB Tests
+
+# GitHub Actions workflow that runs the RadarSimM unit test suite with the
+# official MATLAB actions (https://github.com/matlab-actions).
+#
+# The tests in tests/ only exercise the parts of the package written in pure
+# MATLAB, so they run without the compiled radarsimc backend, which is not
+# redistributed in this repository.
+#
+# radarsimx/radarsimm is a public repository, so MATLAB runs on GitHub-hosted
+# runners without a batch licensing token.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: MATLAB ${{ matrix.release }}
+    # Branches in this repository are already covered by the push event, so
+    # only run the pull_request event for pull requests opened from forks.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest supported release, a recent release, and the newest one.
+        release: [R2022b, R2024b, latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: ${{ matrix.release }}
+          cache: true
+
+      - name: Run tests
+        uses: matlab-actions/run-tests@v3
+        with:
+          source-folder: src
+          select-by-folder: tests
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.release }}
+          path: |
+            test-results/
+            code-coverage/
+          if-no-files-found: warn
+          retention-days: 14

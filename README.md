@@ -2,6 +2,8 @@
 
 <img src="https://raw.githubusercontent.com/radarsimx/.github/refs/heads/main/profile/radarsimm.svg" alt="logo" width="200"/>
 
+[![MATLAB Tests](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests.yml/badge.svg)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests.yml)
+
 Radar Simulator for MATLAB.
 
 ## Introdcution
@@ -42,3 +44,36 @@ Radar Simulator for MATLAB.
 
 - Download the compiled module from [RadarSimM](https://radarsimx.com/product/radarsimm/)
 - Try the files in `examples`.
+
+## Testing
+
+Unit tests live in `tests/` and are written with the MATLAB unit testing
+framework. They cover the parts of the package implemented in pure MATLAB —
+the Tx/Rx channels, the point and mesh targets, the license guards, and the
+public class API — so the suite runs without the compiled `radarsimc`
+backend.
+
+Run the full suite from the repository root:
+
+```matlab
+run_tests
+```
+
+Run a single test class:
+
+```matlab
+addpath('src');
+runtests('tests/TxChannelTest.m')
+```
+
+Or from a shell:
+
+```bash
+matlab -batch "run_tests"
+```
+
+Every push and pull request also runs the suite on GitHub Actions through the
+[`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow, which uses
+[matlab-actions](https://github.com/matlab-actions) to test against R2022b,
+R2024b, and the latest MATLAB release. JUnit results and Cobertura coverage
+are uploaded as build artifacts.

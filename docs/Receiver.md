@@ -19,6 +19,7 @@ title: Receiver
 | `load_resistor_` |  |
 | `noise_bandwidth_` |  |
 | `bb_type_` |  |
+| `gate_delay_` |  |
 | `channels_` | {} |
 | `rx_ptr` | 0 |
 
@@ -36,6 +37,7 @@ Constructor for the Receiver class. Initializes the receiver with specified para
 - baseband_gain (double): Baseband gain.
 - kwargs.noise_figure (double): Noise figure (default: 0).
 - kwargs.bb_type (char): Baseband type ('complex' or 'real') (default: 'complex').
+- kwargs.gate_delay (double): Range-gate/deramp reference delay in seconds (default: 0). The receive window opens gate_delay after the chirp start and the deramp reference is delayed by the same amount, so a target at range c*gate_delay/2 produces a DC beat. 0 keeps the zero-delay deramp behavior.
 - kwargs.channels (cell): Channels (default: {}).
 
 ### `add_rxchannel(obj, rx_ch)`

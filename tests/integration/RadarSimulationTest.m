@@ -222,6 +222,31 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
             testCase.verifyEmpty(simc.noise_);
         end
 
+        function gateDelayDefaultsToZeroDelayDeramp(testCase)
+            radar = testCase.buildRadar();
+
+            testCase.verifyEqual(radar.rx_.gate_delay_, 0);
+        end
+
+        function gateDelayMovesTheTargetToDc(testCase)
+            % The receive window opens gate_delay after the chirp starts and
+            % the deramp reference is delayed by the same amount, so a target
+            % at c * gate_delay / 2 beats at DC.
+            target_range = 60;
+            gate_delay = 2 * target_range / testCase.C;
+
+            radar = testCase.buildRadar('complex', gate_delay);
+            targets = {RadarSim.PointTarget([target_range, 0, 0], [0, 0, 0], 20)};
+
+            simc = testCase.runSimulation(radar, targets, 'noise', false);
+
+            spectrum = abs(fft(simc.baseband_(:, 1)));
+            [~, peak_bin] = max(spectrum);
+
+            testCase.verifyEqual(peak_bin, 1, 'AbsTol', 1, ...
+                'A range-gated target should beat at DC.');
+        end
+
         function realBasebandTypeProducesRealSamples(testCase)
             radar = testCase.buildRadar('real');
             targets = {RadarSim.PointTarget([60, 0, 0], [0, 0, 0], 20)};
@@ -342,9 +367,12 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
 
         % Builds a single-channel FMCW radar and registers the teardown
         % that frees the backend resources in the reverse order.
-        function radar = buildRadar(testCase, bb_type)
+        function radar = buildRadar(testCase, bb_type, gate_delay)
             if nargin < 2
                 bb_type = 'complex';
+            end
+            if nargin < 3
+                gate_delay = 0;
             end
 
             tx = RadarSim.Transmitter(testCase.F, testCase.T, ...
@@ -356,6 +384,7 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
             rx = RadarSim.Receiver(testCase.Fs, 20, 500, 30, ...
                 'noise_figure', 12, ...
                 'bb_type', bb_type, ...
+                'gate_delay', gate_delay, ...
                 'channels', {RadarSim.RxChannel([0, 0, 0])});
 
             radar = RadarSim.Radar(tx, rx);

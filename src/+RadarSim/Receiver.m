@@ -22,6 +22,7 @@ classdef Receiver < handle
         load_resistor_;
         noise_bandwidth_;
         bb_type_;
+        gate_delay_;
         channels_={};
         rx_ptr=0;
     end
@@ -37,6 +38,11 @@ classdef Receiver < handle
         %   baseband_gain (double): Baseband gain.
         %   kwargs.noise_figure (double): Noise figure (default: 0).
         %   kwargs.bb_type (char): Baseband type ('complex' or 'real') (default: 'complex').
+        %   kwargs.gate_delay (double): Range-gate/deramp reference delay in
+        %       seconds (default: 0). The receive window opens gate_delay
+        %       after the chirp start and the deramp reference is delayed by
+        %       the same amount, so a target at range c*gate_delay/2 produces
+        %       a DC beat. 0 keeps the zero-delay deramp behavior.
         %   kwargs.channels (cell): Channels (default: {}).
         function obj = Receiver(fs, rf_gain, load_resistor, baseband_gain, kwargs)
             arguments
@@ -46,6 +52,7 @@ classdef Receiver < handle
                 baseband_gain
                 kwargs.noise_figure = 0
                 kwargs.bb_type = "complex"
+                kwargs.gate_delay (1,1) {mustBeNonnegative} = 0
                 kwargs.channels = {}
             end
             if ~libisloaded('radarsimc')
@@ -73,6 +80,7 @@ classdef Receiver < handle
             obj.load_resistor_ = load_resistor;
 
             obj.bb_type_ = kwargs.bb_type;
+            obj.gate_delay_ = kwargs.gate_delay;
 
             if strcmp(obj.bb_type_, "complex")
                 obj.noise_bandwidth_ = fs;
@@ -81,7 +89,7 @@ classdef Receiver < handle
             end
 
             obj.rx_ptr = calllib('radarsimc', 'Create_Receiver', obj.fs_, obj.rf_gain_, obj.load_resistor_, ...
-                obj.baseband_gain_, obj.noise_bandwidth_);
+                obj.baseband_gain_, obj.noise_bandwidth_, obj.gate_delay_);
 
             for ch_idx=1:length(kwargs.channels)
                 obj.add_rxchannel(kwargs.channels{ch_idx});

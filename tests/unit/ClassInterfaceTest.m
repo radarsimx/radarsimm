@@ -42,8 +42,8 @@ classdef ClassInterfaceTest < matlab.unittest.TestCase
         function receiverExposesItsApi(testCase)
             testCase.verifyClassApi('RadarSim.Receiver', ...
                 {'version_', 'fs_', 'noise_figure_', 'rf_gain_', 'baseband_gain_', ...
-                'load_resistor_', 'noise_bandwidth_', 'bb_type_', 'channels_', ...
-                'rx_ptr'}, ...
+                'load_resistor_', 'noise_bandwidth_', 'bb_type_', 'gate_delay_', ...
+                'channels_', 'rx_ptr'}, ...
                 {'Receiver', 'add_rxchannel', 'reset', 'delete'});
         end
 
@@ -104,6 +104,23 @@ classdef ClassInterfaceTest < matlab.unittest.TestCase
                 testCase.verifyTrue(mc.HandleCompatible, ...
                     sprintf('%s is expected to be a handle class.', name));
             end
+        end
+
+        function receiverPassesEveryArgumentTheBackendDeclares(testCase)
+            % Create_Receiver takes fs, rf_gain, resistor, baseband_gain,
+            % baseband_bw and gate_delay. A calllib argument list that drifts
+            % from the header fails only at run time, with a bare "no method
+            % with matching signature", so pin the call here.
+            source = fileread(fullfile(testCase.repoRoot(), ...
+                'src', '+RadarSim', 'Receiver.m'));
+            call = extractAfter(source, "'Create_Receiver'");
+            testCase.assertNotEmpty(call, ...
+                'Receiver.m no longer calls Create_Receiver.');
+
+            call = extractBefore(call, ")");
+            testCase.verifyEqual(count(call, ','), 6, ...
+                'Create_Receiver expects six arguments after the function name.');
+            testCase.verifySubstring(call, 'gate_delay_');
         end
 
         function packageContainsOnlyDocumentedClasses(testCase)

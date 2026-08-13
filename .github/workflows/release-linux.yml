@@ -86,6 +86,14 @@ jobs:
           linux-local-args: '["--toolkit", "--silent"]'
           use-github-cache: false
 
+      - name: Install CUDA cuRAND development headers
+        # The network install above pulls only the nvcc sub-package, so
+        # curand.h is missing. It comes from the CUDA apt repository the action
+        # has already configured.
+        if: matrix.arch == 'gpu'
+        run: |
+          sudo apt-get install -y libcurand-dev-13-3
+
       - name: Verify CUDA installation
         if: matrix.arch == 'gpu'
         run: |

@@ -77,9 +77,13 @@ jobs:
       - name: Build radarsimc
         # There is no top-level build script for Linux, so radarsimlib's own
         # build.sh is called directly. It resolves its paths against the
-        # working directory, hence the working-directory setting.
+        # working directory, hence the working-directory setting. The script is
+        # committed without the executable bit, so the checkout needs chmod +x
+        # before it can run.
         working-directory: radarsimlib
-        run: ./build.sh --arch=cpu --license=on
+        run: |
+          chmod +x ./build.sh
+          ./build.sh --arch=cpu --license=on
 
       - name: Collect radarsimc and its header
         run: |

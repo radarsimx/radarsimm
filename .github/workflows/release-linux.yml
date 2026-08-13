@@ -1,6 +1,6 @@
 name: Build Linux Libraries
 
-# Linux counterpart of release_windows.yml: builds and packages RadarSimM on
+# Linux counterpart of release-windows.yml: builds and packages RadarSimM on
 # ubuntu-latest with license verification enabled, for both CPU and GPU
 # architectures.
 #
@@ -35,16 +35,11 @@ name: Build Linux Libraries
 # Triggers:
 # - Tag pushes (release events)
 # - Manual workflow dispatch
-# - Push to main branch
-# - Pull requests to main branch
 
 on:
   push:
-    branches: [main]
     tags:
       - "*"
-  pull_request:
-    branches: [main]
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
 

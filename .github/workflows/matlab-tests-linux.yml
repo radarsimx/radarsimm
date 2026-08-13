@@ -1,0 +1,284 @@
+name: MATLAB Tests (Linux)
+
+# Linux counterpart of matlab-tests-windows.yml: the same two test tiers, run on
+# ubuntu-latest against a radarsimc built with GCC.
+#
+# Two Linux-only details make this work, both handled while the build artifact
+# is collected or staged:
+#
+#   Header    radarsim.h expands EXPORTED to
+#             __attribute__((visibility("default"))) on GCC/clang. loadlibrary
+#             cannot parse that, so it never gets as far as generating its thunk
+#             file. The attribute is stripped from the copy that ships with the
+#             artifact; it only marks the ABI for the compiler and has no
+#             bearing on the prototypes loadlibrary reads.
+#
+#   Library   RadarSim.* call loadlibrary(fullfile(pkg_dir, 'radarsimc'), ...),
+#             and MATLAB appends the platform extension, so the build's
+#             libradarsimc.so is staged as radarsimc.so. The alias stays
+#             'radarsimc', matching every calllib call.
+#
+# MATLAB ships its own libstdc++, usually older than the one the runner's GCC
+# builds against, so radarsimc.so can ask for a GLIBCXX version MATLAB's copy
+# does not have. Preloading the system libstdc++ into the MATLAB process keeps
+# the newer symbols available; see the "Resolve the system libstdc++" step.
+#
+# radarsimc is built once and shared with the test jobs as a build artifact, so
+# the release matrix does not pay for the same build three times:
+#
+#   tests/unit         Class metadata, code analyzer, and the guard clauses
+#                      that run before any call into radarsimc. Runs across
+#                      several MATLAB releases with the library staged in
+#                      src/+RadarSim.
+#   tests/integration  Drives the real simulator end to end.
+#
+# radarsimx/radarsimm is a public repository, so MATLAB runs on GitHub-hosted
+# runners without a batch licensing token.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-radarsimc:
+    name: Build radarsimc
+    # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
+    # not expose to workflows triggered by pull requests from forks. Both test
+    # jobs depend on this one, so they are skipped along with it.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v7
+        with:
+          ssh-key: ${{ secrets.RADARSIMCPP }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Display build information
+        run: |
+          echo '::group::Toolchain'
+          cmake --version
+          gcc --version
+          echo '::endgroup::'
+
+      - name: Build radarsimc
+        # There is no top-level build script for Linux, so radarsimlib's own
+        # build.sh is called directly. It resolves its paths against the
+        # working directory, hence the working-directory setting.
+        working-directory: radarsimlib
+        run: ./build.sh --arch=cpu --license=on
+
+      - name: Collect radarsimc and its header
+        run: |
+          set -euo pipefail
+
+          lib=$(find radarsimlib -name 'libradarsimc.so' -type f -print -quit)
+          if [ -z "${lib}" ]; then
+              echo '::error::libradarsimc.so was not produced by the build'
+              exit 1
+          fi
+
+          header='radarsimlib/src/includes/radarsim.h'
+          if [ ! -f "${header}" ]; then
+              echo "::error::radarsim.h not found at ${header}"
+              exit 1
+          fi
+
+          mkdir -p radarsimc-dist
+
+          # loadlibrary appends the platform extension to the name the
+          # RadarSim package passes it, so the file has to be radarsimc.so.
+          cp "${lib}" radarsimc-dist/radarsimc.so
+
+          # Strip the visibility attribute loadlibrary cannot parse.
+          sed 's/__attribute__((visibility("default")))//g' "${header}" \
+              > radarsimc-dist/radarsim.h
+
+          if grep -q '__attribute__' radarsimc-dist/radarsim.h; then
+              echo '::error::radarsim.h still contains a GCC attribute loadlibrary cannot parse'
+              exit 1
+          fi
+
+          echo '::group::Collected files'
+          ls -l radarsimc-dist
+          echo '::endgroup::'
+
+      - name: Upload radarsimc
+        uses: actions/upload-artifact@v7
+        with:
+          name: radarsimc-linux
+          path: radarsimc-dist/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: radarsimc-linux-build-logs
+          path: |
+            radarsimlib/build_logs/
+            *.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  unit-tests:
+    name: Unit tests (MATLAB ${{ matrix.release }})
+    needs: build-radarsimc
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest supported release, a recent release, and the newest one.
+        release: [R2022b, R2024b, latest]
+        include:
+          # run-tests@v3 builds its script around
+          # CodeCoveragePlugin.forFolder(..., 'MetricLevel', ...), which
+          # R2022b does not accept: the run errors out before a single test
+          # executes. Skip coverage there and keep the tests. The two newer
+          # releases cover the same source.
+          - release: R2022b
+            coverage: ''
+          - release: R2024b
+            coverage: code-coverage/coverage.xml
+          - release: latest
+            coverage: code-coverage/coverage.xml
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Stage radarsimc into the RadarSim package
+        uses: actions/download-artifact@v8
+        with:
+          name: radarsimc-linux
+          path: src/+RadarSim
+
+      - name: Install the CI license
+        env:
+          TEST_LICENSE: ${{ secrets.TEST_LICENSE }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${TEST_LICENSE//[[:space:]]/}" ]; then
+              echo '::error::The TEST_LICENSE secret is empty, so the licensed build cannot be tested.'
+              exit 1
+          fi
+
+          license='src/+RadarSim/license_RadarSimM_CI.lic'
+          printf '%s' "${TEST_LICENSE}" > "${license}"
+
+          echo "Wrote $(stat -c%s "${license}") bytes to ${license}"
+
+      - name: Resolve the system libstdc++
+        # Preloaded into MATLAB below so radarsimc.so, built against the
+        # runner's newer GCC runtime, still resolves its GLIBCXX symbols when
+        # MATLAB's bundled libstdc++ is the older one.
+        run: echo "SYSTEM_LIBSTDCPP=$(gcc -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: ${{ matrix.release }}
+          cache: true
+
+      - name: Run unit tests
+        uses: matlab-actions/run-tests@v3
+        env:
+          LD_PRELOAD: ${{ env.SYSTEM_LIBSTDCPP }}
+        with:
+          source-folder: src
+          select-by-folder: tests/unit
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: ${{ matrix.coverage }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-results-linux-${{ matrix.release }}
+          path: |
+            test-results/
+            code-coverage/
+          if-no-files-found: warn
+          retention-days: 14
+
+  integration-tests:
+    name: Integration tests
+    needs: build-radarsimc
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Stage radarsimc into the RadarSim package
+        uses: actions/download-artifact@v8
+        with:
+          name: radarsimc-linux
+          path: src/+RadarSim
+
+      - name: Install the CI license
+        env:
+          TEST_LICENSE: ${{ secrets.TEST_LICENSE }}
+        # RadarSim.License.set_license() activates every
+        # license_RadarSimM_*.lic it finds in the package directory, so the
+        # secret is written there under a name matching that pattern. The
+        # file is covered by the *.lic entry in .gitignore.
+        run: |
+          set -euo pipefail
+
+          if [ -z "${TEST_LICENSE//[[:space:]]/}" ]; then
+              echo '::error::The TEST_LICENSE secret is empty, so the licensed build cannot be tested.'
+              exit 1
+          fi
+
+          license='src/+RadarSim/license_RadarSimM_CI.lic'
+          printf '%s' "${TEST_LICENSE}" > "${license}"
+
+          echo "Wrote $(stat -c%s "${license}") bytes to ${license}"
+
+      - name: Resolve the system libstdc++
+        run: echo "SYSTEM_LIBSTDCPP=$(gcc -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
+
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v3
+        with:
+          release: R2024b
+          cache: true
+
+      - name: Run integration tests
+        uses: matlab-actions/run-tests@v3
+        env:
+          LD_PRELOAD: ${{ env.SYSTEM_LIBSTDCPP }}
+        with:
+          source-folder: src
+          select-by-folder: tests/integration
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-test-results-linux
+          path: |
+            test-results/
+            code-coverage/
+          if-no-files-found: warn
+          retention-days: 14

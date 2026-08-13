@@ -2,7 +2,8 @@
 
 <img src="https://raw.githubusercontent.com/radarsimx/.github/refs/heads/main/profile/radarsimm.svg" alt="logo" width="200"/>
 
-[![MATLAB Tests](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests.yml/badge.svg)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests.yml)
+[![MATLAB Tests (Windows)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests-windows.yml/badge.svg)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests-windows.yml)
+[![MATLAB Tests (Linux)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests-linux.yml/badge.svg)](https://github.com/radarsimx/radarsimm/actions/workflows/matlab-tests-linux.yml)
 
 Radar Simulator for MATLAB.
 
@@ -89,17 +90,23 @@ matlab -batch "run_tests"
 matlab -batch "run_tests('unit')"
 ```
 
-The [`MATLAB Tests`](.github/workflows/matlab-tests.yml) workflow runs both
-tiers on GitHub Actions with [matlab-actions](https://github.com/matlab-actions).
-Everything runs on Windows, the only platform whose exported C API
-`loadlibrary` can parse. A first job builds `radarsimc` from the `radarsimlib`
-submodule with `build_win.bat --arch cpu --license on` and publishes the
-resulting `radarsimc.dll` and `radarsim.h` as a build artifact. Both test jobs
-then stage that artifact into `src/+RadarSim` together with the license from
-the `TEST_LICENSE` secret (written as `license_RadarSimM_CI.lic`), so the unit
-tier — run against R2022b, R2024b, and the latest MATLAB release — and the
-integration tier both test the same installed package layout users get. JUnit
-results and Cobertura coverage are uploaded as build artifacts.
+Both tiers run on GitHub Actions with
+[matlab-actions](https://github.com/matlab-actions), from two workflows:
+[`MATLAB Tests (Windows)`](.github/workflows/matlab-tests-windows.yml) on
+`windows-2025` and [`MATLAB Tests (Linux)`](.github/workflows/matlab-tests-linux.yml)
+on `ubuntu-latest`. Each starts with a job that builds `radarsimc` from the
+`radarsimlib` submodule with license verification on — `build_win.bat --arch cpu
+--license on` on Windows, `radarsimlib/build.sh --arch=cpu --license=on` on
+Linux — and publishes the resulting library and `radarsim.h` as a build
+artifact. The Linux job stages `libradarsimc.so` as `radarsimc.so`, the name
+`loadlibrary` looks for, and strips the
+`__attribute__((visibility("default")))` from the header, which `loadlibrary`
+cannot parse. Both test jobs then stage that artifact into `src/+RadarSim`
+together with the license from the `TEST_LICENSE` secret (written as
+`license_RadarSimM_CI.lic`), so the unit tier — run against R2022b, R2024b, and
+the latest MATLAB release — and the integration tier both test the same
+installed package layout users get. JUnit results and Cobertura coverage are
+uploaded as build artifacts.
 
 The build job needs two repository secrets: `RADARSIMCPP` (deploy key for the
 `radarsimlib`/`radarsimcpp` submodules) and `TEST_LICENSE` (the RadarSimM

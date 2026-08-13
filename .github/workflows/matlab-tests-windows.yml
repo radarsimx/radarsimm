@@ -1,12 +1,14 @@
-name: MATLAB Tests
+name: MATLAB Tests (Windows)
 
 # GitHub Actions workflow that runs the RadarSimM test suite with the official
 # MATLAB actions (https://github.com/matlab-actions).
 #
-# Everything runs on Windows, the platform RadarSimM supports: radarsim.h
-# exports through __declspec(dllexport) there, which MATLAB's loadlibrary
-# understands. The Linux expansion, __attribute__((visibility("default"))),
-# makes loadlibrary fail to generate its thunk file.
+# Everything here runs on Windows, where radarsim.h exports through
+# __declspec(dllexport) and MATLAB's loadlibrary reads the header as shipped.
+# The Linux expansion, __attribute__((visibility("default"))), makes
+# loadlibrary fail to generate its thunk file, so the same two tiers run on
+# ubuntu-latest from matlab-tests-linux.yml, which strips that attribute from
+# the header it stages.
 #
 # radarsimc is built once from the radarsimlib submodule and shared with the
 # test jobs as a build artifact, so the release matrix does not pay for the

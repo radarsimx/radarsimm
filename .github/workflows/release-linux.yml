@@ -1,0 +1,446 @@
+name: Build Linux Libraries
+
+# Linux counterpart of release_windows.yml: builds and packages RadarSimM on
+# ubuntu-latest with license verification enabled, for both CPU and GPU
+# architectures.
+#
+# Build Matrix:
+# - Ubuntu Latest: GCC compiler, 2 builds (2 architectures with license verification)
+# - Architectures: CPU (x86_64), GPU (CUDA)
+# - License: on (with verification enabled for all builds)
+# - Total builds: 2
+#
+# Unlike Windows, there is no top-level build script for Linux, so the
+# radarsimlib submodule's build.sh is called directly and the MATLAB package is
+# assembled here, the way build_win.bat assembles it on Windows: the contents of
+# src/ plus the built library in +RadarSim. Two Linux-only adjustments are made
+# while staging, both matching what matlab-tests-linux.yml does so the released
+# package is the layout the tests exercise:
+#
+#   Library   RadarSim.* call loadlibrary(fullfile(pkg_dir, 'radarsimc'), ...),
+#             and MATLAB appends the platform extension, so libradarsimc.so is
+#             staged as radarsimc.so. The alias stays 'radarsimc', matching
+#             every calllib call.
+#
+#   Header    radarsim.h expands EXPORTED to
+#             __attribute__((visibility("default"))) on GCC/clang, which
+#             loadlibrary cannot parse. It is stripped from the copy that ships
+#             with the package; it only marks the ABI for the compiler and has
+#             no bearing on the prototypes loadlibrary reads.
+#
+# The libraries link the runner's glibc and libstdc++, so the packaged builds
+# target the Ubuntu release of the runner image. That release is recorded in the
+# build summary and in the packed archive's README.
+#
+# Triggers:
+# - Tag pushes (release events)
+# - Manual workflow dispatch
+# - Push to main branch
+# - Pull requests to main branch
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "*"
+  pull_request:
+    branches: [main]
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux CPU with license verification
+          - license: on
+            arch: cpu
+            artifact_name: radarsimm_linux_x86_64_cpu
+          # Linux GPU with license verification
+          - license: on
+            arch: gpu
+            artifact_name: radarsimm_linux_x86_64_gpu
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ssh-key: ${{ secrets.RADARSIMCPP }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup CUDA Toolkit
+        if: matrix.arch == 'gpu'
+        uses: radarsimx/cuda-toolkit@master
+        with:
+          cuda: '13.3.1'
+          method: "network"
+          sub-packages: '["nvcc"]'
+          linux-local-args: '["--toolkit", "--silent"]'
+          use-github-cache: false
+
+      - name: Verify CUDA installation
+        if: matrix.arch == 'gpu'
+        run: |
+          echo "::group::CUDA Verification"
+          nvcc --version
+          echo "CUDA_PATH: ${CUDA_PATH}"
+          if [ -d "${CUDA_PATH}/bin" ]; then
+            ls "${CUDA_PATH}/bin" | grep nvcc
+          else
+            echo "CUDA bin directory not found"
+          fi
+          if [ -d "${CUDA_PATH}/lib64" ]; then
+            echo "CUDA lib directory found"
+          else
+            echo "CUDA lib directory not found"
+          fi
+          echo "::endgroup::"
+
+      - name: Display build information
+        run: |
+          echo "::group::Build Information"
+          echo "OS: ubuntu-latest"
+          echo "License: ${{ matrix.license }}"
+          echo "Architecture: ${{ matrix.arch }}"
+          echo "::endgroup::"
+
+          echo "::group::System Information"
+          . /etc/os-release && echo "Distribution: ${PRETTY_NAME}"
+          echo "Kernel: $(uname -srm)"
+          cmake --version
+          gcc --version | head -1
+          ldd --version | head -1
+          if [ "${{ matrix.arch }}" = "gpu" ]; then
+            nvcc --version
+          fi
+          echo "::endgroup::"
+
+      - name: Build RadarSimM
+        # build.sh is committed without the executable bit, so the checkout
+        # needs chmod +x before it can run. It resolves its paths against the
+        # working directory, hence the working-directory setting.
+        working-directory: radarsimlib
+        env:
+          CUDA_HOME: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
+          CUDACXX: ${{ matrix.arch == 'gpu' && format('{0}/bin/nvcc', env.CUDA_PATH) || '' }}
+          CUDA_TOOLKIT_ROOT_DIR: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
+        run: |
+          echo "::group::Build Process"
+          chmod +x ./build.sh
+          ./build.sh --arch=${{ matrix.arch }} --license=${{ matrix.license }}
+          echo "::endgroup::"
+
+      - name: Assemble the MATLAB package
+        run: |
+          set -euo pipefail
+
+          package='${{ matrix.artifact_name }}'
+
+          lib=$(find radarsimlib -path '*_${{ matrix.arch }}/radarsimlib/libradarsimc.so' \
+              -type f -print -quit)
+          if [ -z "${lib}" ]; then
+              echo '::error::libradarsimc.so was not produced by the build'
+              exit 1
+          fi
+
+          header='radarsimlib/src/includes/radarsim.h'
+          if [ ! -f "${header}" ]; then
+              echo "::error::radarsim.h not found at ${header}"
+              exit 1
+          fi
+
+          rm -rf "${package}"
+          mkdir -p "${package}"
+          cp -r src/. "${package}/"
+
+          # loadlibrary appends the platform extension to the name the
+          # RadarSim package passes it, so the file has to be radarsimc.so.
+          cp "${lib}" "${package}/+RadarSim/radarsimc.so"
+
+          # Strip the visibility attribute loadlibrary cannot parse.
+          sed 's/__attribute__((visibility("default")))//g' "${header}" \
+              > "${package}/+RadarSim/radarsim.h"
+
+          if grep -q '__attribute__' "${package}/+RadarSim/radarsim.h"; then
+              echo '::error::radarsim.h still contains a GCC attribute loadlibrary cannot parse'
+              exit 1
+          fi
+
+          echo "::group::Package contents"
+          ls -l "${package}" "${package}/+RadarSim"
+          echo "::endgroup::"
+
+      - name: Create build summary
+        run: |
+          . /etc/os-release
+          {
+            echo "## Build Summary"
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| OS | ${PRETTY_NAME} |"
+            echo "| License Verification | ${{ matrix.license }} |"
+            echo "| Architecture | ${{ matrix.arch }} |"
+            echo "| Artifact Name | ${{ matrix.artifact_name }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Archive built module
+        uses: actions/upload-artifact@v7
+        if: success()
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ./${{ matrix.artifact_name }}
+          retention-days: 1
+          compression-level: 6
+
+      - name: Upload build logs on failure
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: build-logs-${{ matrix.artifact_name }}
+          path: |
+            ./radarsimlib/build_logs/
+            *.log
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Pack all artifacts into a single file
+  pack-artifacts:
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+    steps:
+      - name: Create artifacts directory
+        run: mkdir -p artifacts
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts/
+
+      - name: Delete downloaded artifacts
+        uses: geekyeggo/delete-artifact@v6
+        with:
+          failOnError: false
+          name: |
+            radarsimm_linux_x86_64_cpu*
+            radarsimm_linux_x86_64_gpu*
+
+      - name: Display downloaded artifacts
+        run: |
+          echo "::group::Downloaded Artifacts"
+          find artifacts/ -type f \( -name "*.so" -o -name "*.h" \) | head -20
+          echo "::endgroup::"
+
+      - name: Create artifact structure
+        run: |
+          mkdir -p packed/radarsimm_linux_all
+
+          # Create the directory structure
+          mkdir -p packed/radarsimm_linux_all/Linux_x86_64_CPU
+          mkdir -p packed/radarsimm_linux_all/Linux_x86_64_GPU
+
+          # Copy each artifact to appropriate directory based on architecture
+          for dir in artifacts/*/; do
+            if [ -d "$dir" ]; then
+              artifact_name=$(basename "$dir")
+              echo "Processing artifact: $artifact_name"
+
+              # Determine target directory based on artifact name
+              if [[ "$artifact_name" == *"gpu"* ]]; then
+                target_dir="packed/radarsimm_linux_all/Linux_x86_64_GPU"
+              else
+                target_dir="packed/radarsimm_linux_all/Linux_x86_64_CPU"
+              fi
+
+              # Ensure target directory exists
+              mkdir -p "$target_dir"
+
+              # Copy the library contents
+              echo "Copying library from $dir to $target_dir/"
+              cp -r "$dir"/* "$target_dir/" 2>/dev/null || true
+            fi
+          done
+
+      - name: Verify artifact structure
+        run: |
+          echo "::group::Artifact Structure Verification"
+          echo "Final directory structure:"
+          find packed/radarsimm_linux_all -type d | sort
+          echo ""
+          echo "Files in each directory:"
+          for dir in packed/radarsimm_linux_all/Linux_*; do
+            if [ -d "$dir" ]; then
+              echo "Contents of $dir:"
+              ls -la "$dir" || echo "Directory is empty or doesn't exist"
+              echo ""
+            fi
+          done
+          echo "::endgroup::"
+
+      - name: Create README for packed artifacts
+        run: |
+          cat > packed/radarsimm_linux_all/README.md << 'EOF'
+          # RadarSimM Linux Build Artifacts
+
+          This archive contains RadarSimM builds for Linux with license verification enabled.
+
+          ## Directory Structure
+
+          The builds are organized by architecture, each holding a complete
+          RadarSimM package (examples, models, and the +RadarSim package):
+
+          ```
+          Linux_x86_64_CPU/
+          ├── +RadarSim/
+          │   ├── radarsimc.so
+          │   └── radarsim.h
+          ├── models/
+          └── example_*.m
+
+          Linux_x86_64_GPU/
+          ├── +RadarSim/
+          │   ├── radarsimc.so
+          │   └── radarsim.h
+          ├── models/
+          └── example_*.m
+          ```
+
+          The shared library is named `radarsimc.so` rather than
+          `libradarsimc.so` because MATLAB's `loadlibrary` appends the platform
+          extension to the name the package passes it. `radarsim.h` ships
+          without the `__attribute__((visibility("default")))` markers, which
+          `loadlibrary` cannot parse; they affect only how the library was
+          compiled, not the exported prototypes.
+
+          ## Architecture Information
+
+          ### Linux_x86_64_CPU (CPU-only build)
+          - Builds with license verification support (requires valid license file)
+          - Compatible with any x86_64 Linux system meeting the runtime requirements below
+
+          ### Linux_x86_64_GPU (CUDA GPU-accelerated build)
+          - Builds with license verification support and GPU acceleration
+          - Requires CUDA 13.0 or compatible version
+          - Compatible with NVIDIA GPUs
+
+          ## Build Information
+
+          - **Total Builds**: 2
+          - **Architectures**: x86_64 CPU, x86_64 GPU (CUDA)
+          - **License**: All builds include license verification
+          - **Library Type**: Shared library (.so)
+          - **Compiler**: GCC
+
+          ## Usage
+
+          1. Choose the appropriate architecture directory for your system:
+             - **Linux_x86_64_CPU**: For CPU-only systems
+             - **Linux_x86_64_GPU**: For systems with NVIDIA GPU
+          2. Add the package directory to the MATLAB path
+          3. Place valid `license_RadarSimM_*.lic` file(s) in the `+RadarSim` directory
+          4. For GPU builds, ensure the CUDA runtime is installed on the target system
+
+          ## License Activation
+
+          Place `license_RadarSimM_*.lic` files in the `+RadarSim` directory.
+          `RadarSim.License.set_license()` searches for and activates them.
+
+          Without a valid license, usage limits apply:
+          - Maximum 1 TX channel
+          - Maximum 1 RX channel
+          - Maximum 2 point targets
+          - Maximum 2 mesh targets
+          - Maximum 8 triangles per mesh
+
+          ## Requirements
+
+          - **CPU builds**: x86_64 Linux with a glibc and libstdc++ at least as new as the build system's
+          - **GPU builds**: NVIDIA GPU with CUDA 13.0+ support
+          - **MATLAB**: MATLAB bundles its own libstdc++, which is often older than
+            the one these libraries were built against. If `loadlibrary` reports a
+            missing `GLIBCXX_*` symbol, start MATLAB with the system library
+            preloaded:
+            `LD_PRELOAD=$(gcc -print-file-name=libstdc++.so.6) matlab`
+          EOF
+
+          # Appended outside the heredoc so the values are expanded rather than
+          # written literally.
+          . /etc/os-release
+          {
+            echo ""
+            echo "Built on ${PRETTY_NAME} at $(date -u +"%Y-%m-%d %H:%M:%S UTC")."
+          } >> packed/radarsimm_linux_all/README.md
+
+      - name: Create compressed archive
+        run: |
+          cd packed
+          tar -czf radarsimm_linux_all_builds.tar.gz radarsimm_linux_all/
+
+          # Create zip version as well
+          zip -r radarsimm_linux_all_builds.zip radarsimm_linux_all/
+
+          echo "::group::Archive Information"
+          ls -lh *.tar.gz *.zip
+          echo "::endgroup::"
+
+      - name: Upload packed artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: radarsimm_linux_all_builds
+          path: |
+            packed/radarsimm_linux_all_builds.tar.gz
+            packed/radarsimm_linux_all_builds.zip
+          retention-days: 1
+          compression-level: 0
+
+  # Summary job that runs after all builds complete
+  build-summary:
+    needs: [build, pack-artifacts]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate build summary
+        run: |
+          {
+            echo "# Linux RadarSimM Build Summary"
+            echo ""
+            echo "## Build Matrix Results"
+            echo "Total builds: 2 - 2 architectures with license verification"
+            echo ""
+            echo "### Architecture Distribution"
+            echo "- **CPU x86_64**: 1 build on ubuntu-latest"
+            echo "- **GPU CUDA**: 1 build on ubuntu-latest"
+            echo ""
+            echo "### License Configuration"
+            echo "- All builds include license verification support"
+            echo "- Requires valid license file for unrestricted use"
+            echo ""
+            echo "### Artifacts Generated"
+            echo '- `radarsimm_linux_x86_64_cpu` - CPU with license verification'
+            echo '- `radarsimm_linux_x86_64_gpu` - GPU with license verification'
+            echo ""
+            echo "### Packed Artifacts"
+            if [ "${{ needs.pack-artifacts.result }}" = "success" ]; then
+              echo "**All artifacts successfully packed into single archive**"
+              echo '- Archive: `radarsimm_linux_all_builds`'
+              echo "- Formats: tar.gz, zip"
+              echo "- Contains: 2 build variants (CPU and GPU) with license verification"
+            else
+              echo "**Artifact packing failed or was skipped**"
+            fi
+            echo ""
+            echo "### Build Status"
+            if [ "${{ needs.build.result }}" = "success" ]; then
+              echo "**All builds completed successfully!**"
+            else
+              echo "**Some builds may have failed. Check individual job logs for details.**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

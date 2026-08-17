@@ -2,6 +2,7 @@
 
 set LICENSE=off
 set ARCH=cpu
+set DEPS=repo
 
 goto GETOPTS
 
@@ -11,6 +12,9 @@ ECHO Usages:
 ECHO    --help      Show the usages of the parameters
 ECHO    --license   Enable license verification, choose 'on' or 'off'. Default is 'off'
 ECHO    --arch      Build architecture, choose 'cpu' or 'gpu'. Default is 'cpu'
+ECHO    --deps      Prebuilt dependency source, choose 'repo' or 'release'. Default is 'repo'
+ECHO                  repo    - committed libs\ tree in the radarsimx-deps submodule
+ECHO                  release - radarsimx-deps GitHub release archives (needs network)
 ECHO:
 goto EOF
 
@@ -18,6 +22,7 @@ goto EOF
 if /I "%1" == "--help" goto Help
 if /I "%1" == "--license" set LICENSE=%2 & shift
 if /I "%1" == "--arch" set ARCH=%2 & shift
+if /I "%1" == "--deps" set DEPS=%2 & shift
 shift
 if not "%1" == "" goto GETOPTS
 
@@ -31,6 +36,13 @@ if /I NOT %LICENSE% == on (
 if /I NOT %ARCH% == cpu (
     if /I NOT %ARCH% == gpu (
         ECHO ERROR: Invalid --arch parameters, please choose 'cpu' or 'gpu'
+        goto EOF
+    )
+)
+
+if /I NOT %DEPS% == repo (
+    if /I NOT %DEPS% == release (
+        ECHO ERROR: Invalid --deps parameters, please choose 'repo' or 'release'
         goto EOF
     )
 )
@@ -54,15 +66,15 @@ ECHO:
 CD ".\radarsimlib"
 
 if /I %ARCH% == gpu (
-    ECHO [Build GPU version - license=%LICENSE%]
+    ECHO [Build GPU version - license=%LICENSE% deps=%DEPS%]
     SET package_path=".\radarsimm_win_x86_64_gpu"
     SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_gpu\radarsimlib"
-    CALL build.bat --arch gpu --license %LICENSE%
+    CALL build.bat --arch gpu --license %LICENSE% --deps %DEPS%
 ) else if /I %ARCH% == cpu (
-    ECHO [Build CPU version - license=%LICENSE%]
+    ECHO [Build CPU version - license=%LICENSE% deps=%DEPS%]
     SET package_path=".\radarsimm_win_x86_64_cpu"
     SET lib_path=".\radarsimlib\radarsimlib_win_x86_64_cpu\radarsimlib"
-    CALL build.bat --arch cpu --license %LICENSE%
+    CALL build.bat --arch cpu --license %LICENSE% --deps %DEPS%
 )
 
 CD ..
@@ -73,3 +85,5 @@ XCOPY /E /Y .\src\ %package_path%\
 XCOPY /E /Y %lib_path%\* %package_path%\+RadarSim\
 
 ECHO [Build completed]
+
+:EOF

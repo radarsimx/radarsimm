@@ -64,7 +64,7 @@ jobs:
 
       - name: Build radarsimc
         shell: cmd
-        run: .\build_win.bat --arch cpu --license on
+        run: .\build_win.bat --arch cpu --license on --deps release
 
       - name: Collect radarsimc and its header
         shell: pwsh

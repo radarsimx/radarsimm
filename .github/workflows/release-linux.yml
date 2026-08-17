@@ -138,7 +138,7 @@ jobs:
         run: |
           echo "::group::Build Process"
           chmod +x ./build.sh
-          ./build.sh --arch=${{ matrix.arch }} --license=${{ matrix.license }}
+          ./build.sh --arch=${{ matrix.arch }} --license=${{ matrix.license }} --deps=release
           echo "::endgroup::"
 
       - name: Assemble the MATLAB package

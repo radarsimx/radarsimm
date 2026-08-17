@@ -69,6 +69,31 @@ The compiled module will be available in the `radarsimm_win_x86_64_cpu` or `rada
 ## Build Options
 
 - `--arch`: Build architecture (`cpu` or `gpu`)
+- `--license`: Enable license verification (`on` or `off`)
+- `--deps`: Prebuilt dependency source (`repo` or `release`)
+
+## Prebuilt Dependency Source
+
+RadarSimCpp links third-party libraries (HDF5, and mbedTLS when license
+verification is enabled) as prebuilt static libraries. They are never compiled
+as part of a RadarSimM build; `--deps` only chooses where they are read from.
+
+| `--deps` | Where the libraries come from | Network needed |
+|---|---|---|
+| `repo` (default) | The committed `libs/` tree in the `radarsimx-deps` submodule, reached through `radarsimlib/src/radarsimcpp/deps` | No |
+| `release` | The checksum-pinned release archives published by [`radarsimx/radarsimx-deps`](https://github.com/radarsimx/radarsimx-deps), downloaded and cached under `radarsimlib/src/radarsimcpp/.deps-cache/` | Yes, on the first build |
+
+```batch
+build_win.bat --deps=release
+```
+
+`build_win.bat` forwards the setting to `radarsimlib/build.bat`; on Linux, pass
+it to `radarsimlib/build.sh --deps=release` directly.
+
+`repo` is the default because it needs no network and pins the dependencies to
+the submodule commit, which makes it the right choice for local and offline
+builds. The GitHub Actions workflows all pass `--deps=release`, so CI links the
+same tagged, checksum-verified archives every time.
 
 ## Troubleshooting
 

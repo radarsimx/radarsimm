@@ -96,8 +96,9 @@ Both tiers run on GitHub Actions with
 `windows-2025` and [`MATLAB Tests (Linux)`](.github/workflows/matlab-tests-linux.yml)
 on `ubuntu-latest`. Each starts with a job that builds `radarsimc` from the
 `radarsimlib` submodule with license verification on — `build_win.bat --arch cpu
---license on` on Windows, `radarsimlib/build.sh --arch=cpu --license=on` on
-Linux — and publishes the resulting library and `radarsim.h` as a build
+--license on --deps release` on Windows, `radarsimlib/build.sh --arch=cpu
+--license=on --deps=release` on Linux — and publishes the resulting library and
+`radarsim.h` as a build
 artifact. The Linux job stages `libradarsimc.so` as `radarsimc.so`, the name
 `loadlibrary` looks for, and strips the
 `__attribute__((visibility("default")))` from the header, which `loadlibrary`

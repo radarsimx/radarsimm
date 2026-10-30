@@ -1,10 +1,14 @@
 name: MATLAB Tests (Linux)
 
 # Linux counterpart of matlab-tests-windows.yml: the same two test tiers, run on
-# ubuntu-latest against a radarsimc built with GCC.
+# ubuntu-latest against the radarsimc published in the radarsimlib GitHub
+# release pinned by .github/radarsimlib-version.
 #
-# Two Linux-only details make this work, both handled while the build artifact
-# is collected or staged:
+# radarsimlib publishes GPU builds only. They pick the CPU path at runtime when
+# no CUDA device is present, which is the case on GitHub-hosted runners.
+#
+# Two Linux-only details make this work, both handled while the library is
+# collected or staged:
 #
 #   Header    radarsim.h expands EXPORTED to
 #             __attribute__((visibility("default"))) on GCC/clang. loadlibrary
@@ -18,13 +22,12 @@ name: MATLAB Tests (Linux)
 #             libradarsimc.so is staged as radarsimc.so. The alias stays
 #             'radarsimc', matching every calllib call.
 #
-# MATLAB ships its own libstdc++, usually older than the one the runner's GCC
-# builds against, so radarsimc.so can ask for a GLIBCXX version MATLAB's copy
+# MATLAB ships its own libstdc++, usually older than the one radarsimc was
+# built against, so radarsimc.so can ask for a GLIBCXX version MATLAB's copy
 # does not have. Preloading the system libstdc++ into the MATLAB process keeps
 # the newer symbols available; see the "Resolve the system libstdc++" step.
 #
-# radarsimc is built once and shared with the test jobs as a build artifact, so
-# the release matrix does not pay for the same build three times:
+# radarsimc is downloaded once and shared with the test jobs as an artifact:
 #
 #   tests/unit         Class metadata, code analyzer, and the guard clauses
 #                      that run before any call into radarsimc. Runs across
@@ -50,54 +53,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-radarsimc:
-    name: Build radarsimc
-    # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
-    # not expose to workflows triggered by pull requests from forks. Both test
-    # jobs depend on this one, so they are skipped along with it.
+  fetch-radarsimc:
+    name: Fetch radarsimc
+    # The test jobs need the TEST_LICENSE secret, which GitHub does not expose
+    # to workflows triggered by pull requests from forks. Both test jobs depend
+    # on this one, so they are skipped along with it.
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout repository and submodules
+      - name: Checkout
         uses: actions/checkout@v7
-        with:
-          ssh-key: ${{ secrets.RADARSIMCPP }}
-          submodules: recursive
-          fetch-depth: 0
 
-      - name: Display build information
+      - name: Download radarsimlib release
+        # ubuntu-latest is Ubuntu 24.04, so take the matching build.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo '::group::Toolchain'
-          cmake --version
-          gcc --version
-          echo '::endgroup::'
+          set -euo pipefail
 
-      - name: Build radarsimc
-        # There is no top-level build script for Linux, so radarsimlib's own
-        # build.sh is called directly. It resolves its paths against the
-        # working directory, hence the working-directory setting. The script is
-        # committed without the executable bit, so the checkout needs chmod +x
-        # before it can run.
-        working-directory: radarsimlib
-        run: |
-          chmod +x ./build.sh
-          ./build.sh --arch=cpu --license=on --deps=release
+          version=$(tr -d '[:space:]' < .github/radarsimlib-version)
+          asset="radarsimlib_${version}_Ubuntu24_x86_64_GPU.zip"
+          echo "radarsimlib ${version}: ${asset}"
+
+          mkdir -p radarsimlib-release
+          gh release download "${version}" --repo radarsimx/radarsimlib \
+              --pattern "${asset}" --dir radarsimlib-release
+          unzip -q "radarsimlib-release/${asset}" -d radarsimlib-release
 
       - name: Collect radarsimc and its header
         run: |
           set -euo pipefail
 
-          lib=$(find radarsimlib -name 'libradarsimc.so' -type f -print -quit)
+          lib=$(find radarsimlib-release -name 'libradarsimc.so' -type f -print -quit)
           if [ -z "${lib}" ]; then
-              echo '::error::libradarsimc.so was not produced by the build'
+              echo '::error::libradarsimc.so not found in the radarsimlib release'
               exit 1
           fi
 
-          header='radarsimlib/src/includes/radarsim.h'
-          if [ ! -f "${header}" ]; then
-              echo "::error::radarsim.h not found at ${header}"
+          header=$(find radarsimlib-release -name 'radarsim.h' -type f -print -quit)
+          if [ -z "${header}" ]; then
+              echo '::error::radarsim.h not found in the radarsimlib release'
               exit 1
           fi
 
@@ -128,20 +125,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: radarsimc-linux-build-logs
-          path: |
-            radarsimlib/build_logs/
-            *.log
-          if-no-files-found: ignore
-          retention-days: 14
-
   unit-tests:
     name: Unit tests (MATLAB ${{ matrix.release }})
-    needs: build-radarsimc
+    needs: fetch-radarsimc
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -189,8 +175,8 @@ jobs:
           echo "Wrote $(stat -c%s "${license}") bytes to ${license}"
 
       - name: Resolve the system libstdc++
-        # Preloaded into MATLAB below so radarsimc.so, built against the
-        # runner's newer GCC runtime, still resolves its GLIBCXX symbols when
+        # Preloaded into MATLAB below so radarsimc.so, built against Ubuntu
+        # 24.04's newer GCC runtime, still resolves its GLIBCXX symbols when
         # MATLAB's bundled libstdc++ is the older one.
         run: echo "SYSTEM_LIBSTDCPP=$(gcc -print-file-name=libstdc++.so.6)" >> "$GITHUB_ENV"
 
@@ -223,7 +209,7 @@ jobs:
 
   integration-tests:
     name: Integration tests
-    needs: build-radarsimc
+    needs: fetch-radarsimc
     runs-on: ubuntu-latest
     timeout-minutes: 45
 

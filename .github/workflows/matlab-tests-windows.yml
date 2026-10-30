@@ -10,9 +10,11 @@ name: MATLAB Tests (Windows)
 # ubuntu-latest from matlab-tests-linux.yml, which strips that attribute from
 # the header it stages.
 #
-# radarsimc is built once from the radarsimlib submodule and shared with the
-# test jobs as a build artifact, so the release matrix does not pay for the
-# same build three times. Both tiers run against that build:
+# radarsimc comes from the radarsimlib GitHub release pinned by
+# .github/radarsimlib-version. It is downloaded once and shared with the test
+# jobs as an artifact. radarsimlib publishes GPU builds only; they pick the CPU
+# path at runtime when no CUDA device is present, which is the case on
+# GitHub-hosted runners. Both tiers run against that library:
 #
 #   tests/unit         Class metadata, code analyzer, and the guard clauses
 #                      that run before any call into radarsimc. Runs across
@@ -38,59 +40,58 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-radarsimc:
-    name: Build radarsimc
-    # Building radarsimc needs the RadarSimCpp deploy key, which GitHub does
-    # not expose to workflows triggered by pull requests from forks. Both test
-    # jobs depend on this one, so they are skipped along with it.
+  fetch-radarsimc:
+    name: Fetch radarsimc
+    # The test jobs need the TEST_LICENSE secret, which GitHub does not expose
+    # to workflows triggered by pull requests from forks. Both test jobs depend
+    # on this one, so they are skipped along with it.
     if: github.event_name != 'pull_request'
-    runs-on: windows-2025
-    timeout-minutes: 90
+    # Only downloads and unpacks the release, so a Linux runner is enough.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout repository and submodules
+      - name: Checkout
         uses: actions/checkout@v7
-        with:
-          ssh-key: ${{ secrets.RADARSIMCPP }}
-          submodules: recursive
-          fetch-depth: 0
 
-      - name: Display build information
-        shell: cmd
+      - name: Download radarsimlib release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo ::group::Toolchain
-          cmake --version
-          echo ::endgroup::
+          set -euo pipefail
 
-      - name: Build radarsimc
-        shell: cmd
-        run: .\build_win.bat --arch cpu --license on --deps release
+          version=$(tr -d '[:space:]' < .github/radarsimlib-version)
+          asset="radarsimlib_${version}_Windows_x86_64_GPU.zip"
+          echo "radarsimlib ${version}: ${asset}"
+
+          mkdir -p radarsimlib-release
+          gh release download "${version}" --repo radarsimx/radarsimlib \
+              --pattern "${asset}" --dir radarsimlib-release
+          unzip -q "radarsimlib-release/${asset}" -d radarsimlib-release
 
       - name: Collect radarsimc and its header
-        shell: pwsh
         run: |
-          $ErrorActionPreference = 'Stop'
+          set -euo pipefail
 
-          $lib = Get-ChildItem -Path radarsimlib -Recurse -Filter 'radarsimc.dll' |
-              Select-Object -First 1
-          if (-not $lib) {
-              Write-Output '::error::radarsimc.dll was not produced by the build'
+          lib=$(find radarsimlib-release -name 'radarsimc.dll' -type f -print -quit)
+          if [ -z "${lib}" ]; then
+              echo '::error::radarsimc.dll not found in the radarsimlib release'
               exit 1
-          }
+          fi
 
-          $header = 'radarsimlib\src\includes\radarsim.h'
-          if (-not (Test-Path $header)) {
-              Write-Output "::error::radarsim.h not found at $header"
+          header=$(find radarsimlib-release -name 'radarsim.h' -type f -print -quit)
+          if [ -z "${header}" ]; then
+              echo '::error::radarsim.h not found in the radarsimlib release'
               exit 1
-          }
+          fi
 
-          New-Item -ItemType Directory -Path 'radarsimc-dist' -Force | Out-Null
-          Copy-Item $lib.FullName 'radarsimc-dist\radarsimc.dll' -Force
-          Copy-Item $header 'radarsimc-dist\radarsim.h' -Force
+          mkdir -p radarsimc-dist
+          cp "${lib}" radarsimc-dist/radarsimc.dll
+          cp "${header}" radarsimc-dist/radarsim.h
 
-          Write-Output '::group::Collected files'
-          Get-ChildItem 'radarsimc-dist'
-          Write-Output '::endgroup::'
+          echo '::group::Collected files'
+          ls -l radarsimc-dist
+          echo '::endgroup::'
 
       - name: Upload radarsimc
         uses: actions/upload-artifact@v7
@@ -100,20 +101,9 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Upload build logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: radarsimc-build-logs
-          path: |
-            radarsimlib/build_logs/
-            *.log
-          if-no-files-found: ignore
-          retention-days: 14
-
   unit-tests:
     name: Unit tests (MATLAB ${{ matrix.release }})
-    needs: build-radarsimc
+    needs: fetch-radarsimc
     runs-on: windows-2025
     timeout-minutes: 45
     strategy:
@@ -199,7 +189,7 @@ jobs:
 
   integration-tests:
     name: Integration tests
-    needs: build-radarsimc
+    needs: fetch-radarsimc
     runs-on: windows-2025
     timeout-minutes: 45
 

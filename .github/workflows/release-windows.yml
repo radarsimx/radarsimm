@@ -1,29 +1,18 @@
 name: Build Windows Libraries
 
-# GitHub Actions workflow for building and packaging RadarSimM on Windows platforms.
+# Packages RadarSimM for Windows from the radarsimlib GitHub release
+# (https://github.com/radarsimx/radarsimlib/releases) pinned by
+# .github/radarsimlib-version. A manual run can override the version.
 #
-# This workflow builds RadarSimM with license verification enabled for both
-# CPU and GPU architectures. It provides comprehensive Windows coverage with
-# both CPU-only and CUDA GPU-accelerated builds.
+# build_win.bat downloads the release and assembles the package: the contents
+# of src/ plus radarsimc.dll, radarsimc.lib and radarsim.h in +RadarSim.
 #
-# Build Matrix:
-# - Windows Latest: MSVC compiler, 2 builds (2 architectures with license verification)
-# - Architectures: CPU (x86_64), GPU (CUDA)
-# - License: on (with verification enabled for all builds)
-# - Total builds: 2
-#
-# Features:
-# - CUDA toolkit setup for GPU builds
-# - Build optimization and caching
-# - Artifact verification and validation
-# - Multi-architecture artifact packing
-# - Detailed build reporting and summaries
-# - Error handling with build log uploads
+# radarsimlib publishes GPU builds only. They pick the CPU path at runtime when
+# no usable CUDA device is present, so the same package serves CPU-only
+# machines.
 #
 # Outputs:
-# - Individual artifacts for each build configuration
-# - Packed archive containing all builds organized by architecture
-# - Build summaries and statistics
+# - Packed archive (tar.gz and zip) containing the package
 #
 # Triggers:
 # - Tag pushes (release events)
@@ -35,193 +24,91 @@ on:
       - "*"
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
+    inputs:
+      radarsimlib_version:
+        description: "radarsimlib release tag (e.g. v15.6.0). Empty uses .github/radarsimlib-version."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: windows-2025
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Windows CPU with license verification
-          - license: on
-            arch: cpu
-            artifact_name: radarsimm_win_x86_64_cpu
-          # Windows GPU with license verification
-          - license: on
-            arch: gpu
-            artifact_name: radarsimm_win_x86_64_gpu
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-        with:
-          ssh-key: ${{ secrets.RADARSIMCPP }}
-          submodules: recursive
-          fetch-depth: 0
 
-      - name: Setup CUDA Toolkit
-        if: matrix.arch == 'gpu'
-        uses: radarsimx/cuda-toolkit@master
-        with:
-          cuda: '13.3.1'
-          method: 'local'
-          use-github-cache: false
-
-      - name: Verify CUDA installation
-        if: matrix.arch == 'gpu'
-        run: |
-          echo "::group::CUDA Verification"
-          nvcc --version
-          echo "CUDA_PATH: %CUDA_PATH%"
-          echo "PATH: %PATH%"
-          if exist "%CUDA_PATH%\bin\" (
-            dir "%CUDA_PATH%\bin\" | findstr nvcc
-          ) else (
-            echo "CUDA bin directory not found"
-          )
-          if exist "%CUDA_PATH%\lib\x64\" (
-            echo "CUDA lib directory found"
-          ) else (
-            echo "CUDA lib directory not found"
-          )
-          echo "::endgroup::"
+      - name: Package RadarSimM
         shell: cmd
-
-      - name: Display build information
-        run: |
-          echo "::group::Build Information"
-          echo "OS: windows-latest"
-          echo "License: ${{ matrix.license }}"
-          echo "Architecture: ${{ matrix.arch }}"
-          if "${{ matrix.arch }}" == "gpu" (
-            echo "CUDA Version: $(nvcc --version | findstr "release" | for /f "tokens=5" %%a in ('findstr "release"') do echo %%a)"
-          )
-          echo "::endgroup::"
-
-          echo "::group::System Information"
-          systeminfo | findstr /C:"OS Name" /C:"OS Version"
-          if "${{ matrix.arch }}" == "gpu" (
-            nvcc --version
-          )
-          echo "::endgroup::"
-        shell: cmd
-
-      - name: Build RadarSimM
         env:
-          CUDA_PATH: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
-          CUDA_HOME: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
-          CUDACXX: ${{ matrix.arch == 'gpu' && format('{0}\bin\nvcc.exe', env.CUDA_PATH) || '' }}
-          CUDA_TOOLKIT_ROOT_DIR: ${{ matrix.arch == 'gpu' && env.CUDA_PATH || '' }}
+          INPUT_VERSION: ${{ inputs.radarsimlib_version }}
         run: |
-          echo "::group::Build Process"
-          .\build_win.bat --arch=${{ matrix.arch }} --license=${{ matrix.license }} --deps=release
-          echo "::endgroup::"
-        shell: cmd
+          if "%INPUT_VERSION%" == "" (
+            .\build_win.bat
+          ) else (
+            .\build_win.bat --version %INPUT_VERSION%
+          )
 
-      - name: Create build summary
+      - name: Verify package
+        shell: pwsh
         run: |
-          echo "## Build Summary" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Property | Value |" >> $env:GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $env:GITHUB_STEP_SUMMARY
-          echo "| OS | windows-latest |" >> $env:GITHUB_STEP_SUMMARY
-          echo "| License Verification | ${{ matrix.license }} |" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Architecture | ${{ matrix.arch }} |" >> $env:GITHUB_STEP_SUMMARY
-          echo "| Artifact Name | ${{ matrix.artifact_name }} |" >> $env:GITHUB_STEP_SUMMARY
-        shell: powershell
+          $ErrorActionPreference = 'Stop'
+          foreach ($f in 'radarsimc.dll', 'radarsim.h') {
+              $p = "radarsimm_win_x86_64_gpu\+RadarSim\$f"
+              if (-not (Test-Path $p)) {
+                  Write-Output "::error::$p is missing from the package"
+                  exit 1
+              }
+          }
+          Get-ChildItem 'radarsimm_win_x86_64_gpu', 'radarsimm_win_x86_64_gpu\+RadarSim'
 
-      - name: Archive built module
+      - name: Archive package
         uses: actions/upload-artifact@v7
-        if: success()
         with:
-          name: ${{ matrix.artifact_name }}
-          path: .\radarsimm_win_x86_64_${{ matrix.arch }}
+          name: radarsimm_win_x86_64_gpu
+          path: .\radarsimm_win_x86_64_gpu
           retention-days: 1
           compression-level: 6
 
-      - name: Upload build logs on failure
-        uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: build-logs-${{ matrix.artifact_name }}
-          path: |
-            .\build_logs\
-            *.log
-          retention-days: 1
-
-  # Pack all artifacts into a single file
+  # Pack the package with a README into a single archive
   pack-artifacts:
     needs: build
     runs-on: ubuntu-latest
-    if: success()
     steps:
-      - name: Create artifacts directory
-        run: mkdir -p artifacts
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-      - name: Download all artifacts
+      - name: Resolve radarsimlib version
+        env:
+          INPUT_VERSION: ${{ inputs.radarsimlib_version }}
+        run: |
+          set -euo pipefail
+          version="${INPUT_VERSION//[[:space:]]/}"
+          if [ -z "${version}" ]; then
+              version=$(tr -d '[:space:]' < .github/radarsimlib-version)
+          fi
+          echo "RADARSIMLIB_VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Download package
         uses: actions/download-artifact@v8
         with:
-          path: artifacts/
+          name: radarsimm_win_x86_64_gpu
+          path: packed/radarsimm_windows_all/Windows_x86_64_GPU
 
-      - name: Delete downloaded artifacts
+      - name: Delete downloaded artifact
         uses: geekyeggo/delete-artifact@v6
         with:
           failOnError: false
-          name: |
-            radarsimm_win_x86_64_cpu*
-            radarsimm_win_x86_64_gpu*
-
-      - name: Display downloaded artifacts
-        run: |
-          echo "::group::Downloaded Artifacts"
-          find artifacts/ -type f -name "*.dll" -o -name "*.h" -o -name "*.lib" | head -20
-          echo "::endgroup::"
-
-      - name: Create artifact structure
-        run: |
-          mkdir -p packed/radarsimm_windows_all
-
-          # Create the directory structure
-          mkdir -p packed/radarsimm_windows_all/Windows_x86_64_CPU
-          mkdir -p packed/radarsimm_windows_all/Windows_x86_64_GPU
-
-          # Copy each artifact to appropriate directory based on architecture
-          for dir in artifacts/*/; do
-            if [ -d "$dir" ]; then
-              artifact_name=$(basename "$dir")
-              echo "Processing artifact: $artifact_name"
-              
-              # Determine target directory based on artifact name
-              if [[ "$artifact_name" == *"gpu"* ]]; then
-                target_dir="packed/radarsimm_windows_all/Windows_x86_64_GPU"
-              else
-                target_dir="packed/radarsimm_windows_all/Windows_x86_64_CPU"
-              fi
-              
-              # Ensure target directory exists
-              mkdir -p "$target_dir"
-              
-              # Copy the library contents
-              echo "Copying library from $dir to $target_dir/"
-              cp -r "$dir"/* "$target_dir/" 2>/dev/null || true
-            fi
-          done
+          name: radarsimm_win_x86_64_gpu
 
       - name: Verify artifact structure
         run: |
           echo "::group::Artifact Structure Verification"
-          echo "Final directory structure:"
-          find packed/radarsimm_windows_all -type d | sort
-          echo ""
-          echo "Files in each directory:"
-          for dir in packed/radarsimm_windows_all/*/Windows_*; do
-            if [ -d "$dir" ]; then
-              echo "Contents of $dir:"
-              ls -la "$dir" || echo "Directory is empty or doesn't exist"
-              echo ""
-            fi
-          done
+          find packed/radarsimm_windows_all -maxdepth 3 | sort
           echo "::endgroup::"
 
       - name: Create README for packed artifacts
@@ -229,58 +116,36 @@ jobs:
           cat > packed/radarsimm_windows_all/README.md << 'EOF'
           # RadarSimM Windows Build Artifacts
 
-          This archive contains RadarSimM builds for Windows platforms with license verification enabled.
+          This archive contains the RadarSimM package for Windows with license
+          verification enabled.
 
           ## Directory Structure
 
-          The builds are organized by architecture:
-
           ```
-          Windows_x86_64_CPU/
-          ├── radarsimc.dll
-          ├── radarsimc.lib
-          └── radarsim.h
-
           Windows_x86_64_GPU/
-          ├── radarsimc.dll
-          ├── radarsimc.lib
-          └── radarsim.h
+          ├── +RadarSim/
+          │   ├── radarsimc.dll
+          │   ├── radarsimc.lib
+          │   └── radarsim.h
+          ├── models/
+          └── example_*.m
           ```
 
-          ## Architecture Information
+          ## GPU and CPU
 
-          ### Windows_x86_64_CPU (CPU-only build)
-          - Builds with license verification support (requires valid license file)
-          - Compatible with any x86_64 Windows system
-
-          ### Windows_x86_64_GPU (CUDA GPU-accelerated build)
-          - Builds with license verification support and GPU acceleration
-          - Requires CUDA 13.0 or compatible version
-          - Compatible with NVIDIA GPUs
-
-          ## Build Information
-
-          - **Total Builds**: 2
-          - **Architectures**: x86_64 CPU, x86_64 GPU (CUDA)
-          - **License**: All builds include license verification
-          - **Library Type**: Dynamic library (.dll) with import library (.lib)
-          - **Compiler**: MSVC
-          - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          The library is a CUDA build. It uses an NVIDIA GPU when one is
+          available and falls back to the CPU otherwise, so the same package
+          serves both kinds of machine.
 
           ## Usage
 
-          1. Choose the appropriate architecture directory for your system:
-             - **Windows_x86_64_CPU**: For CPU-only systems
-             - **Windows_x86_64_GPU**: For systems with NVIDIA GPU
-          2. Link against radarsimc.lib and include radarsim.h in your project
-          3. Ensure radarsimc.dll is accessible at runtime
-          4. Place valid `license_radarsimc_*.lic` file(s) in your MATLAB working directory
-          5. For GPU builds, ensure CUDA runtime is installed on target system
+          1. Add the `Windows_x86_64_GPU` directory to the MATLAB path
+          2. Place valid `license_RadarSimM_*.lic` file(s) in the `+RadarSim` directory
 
           ## License Activation
 
-          Place `license_radarsimc_*.lic` files in your MATLAB working directory.
-          The library automatically searches for and activates licenses on startup.
+          Place `license_RadarSimM_*.lic` files in the `+RadarSim` directory.
+          `RadarSim.License.set_license()` searches for and activates them.
 
           Without a valid license, usage limits apply:
           - Maximum 1 TX channel
@@ -291,18 +156,21 @@ jobs:
 
           ## Requirements
 
-          - **CPU builds**: Any x86_64 Windows system
-          - **GPU builds**: NVIDIA GPU with CUDA 13.0+ support
-          - **Runtime**: Microsoft Visual C++ Redistributable
+          - x86_64 Windows
+          - Microsoft Visual C++ Redistributable
+          - For GPU acceleration: an NVIDIA GPU and driver supporting CUDA 13
           EOF
+
+          {
+            echo ""
+            echo "Packaged from radarsimlib ${RADARSIMLIB_VERSION} at $(date -u +"%Y-%m-%d %H:%M:%S UTC")."
+          } >> packed/radarsimm_windows_all/README.md
 
       - name: Create compressed archive
         run: |
           cd packed
           tar -czf radarsimm_windows_all_builds.tar.gz radarsimm_windows_all/
-
-          # Create zip version as well
-          zip -r radarsimm_windows_all_builds.zip radarsimm_windows_all/
+          zip -qr radarsimm_windows_all_builds.zip radarsimm_windows_all/
 
           echo "::group::Archive Information"
           ls -lh *.tar.gz *.zip
@@ -318,45 +186,15 @@ jobs:
           retention-days: 1
           compression-level: 0
 
-  # Summary job that runs after all builds complete
-  build-summary:
-    needs: [build, pack-artifacts]
-    runs-on: windows-latest
-    if: always()
-    steps:
-      - name: Generate build summary
+      - name: Create build summary
+        if: always()
         run: |
-          echo "# Windows RadarSimM Build Summary" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "## Build Matrix Results" >> $env:GITHUB_STEP_SUMMARY
-          echo "Total builds: 2 - 2 architectures with license verification" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "### Architecture Distribution" >> $env:GITHUB_STEP_SUMMARY
-          echo "- **CPU x86_64**: 1 build on windows-2025" >> $env:GITHUB_STEP_SUMMARY
-          echo "- **GPU CUDA**: 1 build on windows-2025" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "### License Configuration" >> $env:GITHUB_STEP_SUMMARY
-          echo "- All builds include license verification support" >> $env:GITHUB_STEP_SUMMARY
-          echo "- Requires valid license file for unrestricted use" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "### Artifacts Generated" >> $env:GITHUB_STEP_SUMMARY
-          echo "- ``radarsimm_win_x86_64_cpu`` - CPU with license verification" >> $env:GITHUB_STEP_SUMMARY
-          echo "- ``radarsimm_win_x86_64_gpu`` - GPU with license verification" >> $env:GITHUB_STEP_SUMMARY
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "### Packed Artifacts" >> $env:GITHUB_STEP_SUMMARY
-          if ("${{ needs.pack-artifacts.result }}" -eq "success") {
-            echo "**All artifacts successfully packed into single archive**" >> $env:GITHUB_STEP_SUMMARY
-            echo "- Archive: ``radarsimm_windows_all_builds``" >> $env:GITHUB_STEP_SUMMARY
-            echo "- Formats: tar.gz, zip" >> $env:GITHUB_STEP_SUMMARY
-            echo "- Contains: 2 build variants (CPU and GPU) with license verification" >> $env:GITHUB_STEP_SUMMARY
-          } else {
-            echo "**Artifact packing failed or was skipped**" >> $env:GITHUB_STEP_SUMMARY
-          }
-          echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "### Build Status" >> $env:GITHUB_STEP_SUMMARY
-          if ("${{ needs.build.result }}" -eq "success") {
-            echo "**All builds completed successfully!**" >> $env:GITHUB_STEP_SUMMARY
-          } else {
-            echo "**Some builds may have failed. Check individual job logs for details.**" >> $env:GITHUB_STEP_SUMMARY
-          }
-        shell: powershell
+          {
+            echo "# Windows RadarSimM Build Summary"
+            echo ""
+            echo "| Property | Value |"
+            echo "|----------|-------|"
+            echo "| radarsimlib | \`${RADARSIMLIB_VERSION:-unknown}\` |"
+            echo "| Package | \`Windows_x86_64_GPU\` |"
+            echo "| Status | ${{ job.status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

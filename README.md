@@ -94,12 +94,12 @@ Both tiers run on GitHub Actions with
 [matlab-actions](https://github.com/matlab-actions), from two workflows:
 [`MATLAB Tests (Windows)`](.github/workflows/matlab-tests-windows.yml) on
 `windows-2025` and [`MATLAB Tests (Linux)`](.github/workflows/matlab-tests-linux.yml)
-on `ubuntu-latest`. Each starts with a job that builds `radarsimc` from the
-`radarsimlib` submodule with license verification on — `build_win.bat --arch cpu
---license on --deps release` on Windows, `radarsimlib/build.sh --arch=cpu
---license=on --deps=release` on Linux — and publishes the resulting library and
-`radarsim.h` as a build
-artifact. The Linux job stages `libradarsimc.so` as `radarsimc.so`, the name
+on `ubuntu-latest`. Each starts with a job that downloads `radarsimc` from the
+[radarsimlib release](https://github.com/radarsimx/radarsimlib/releases) pinned
+in [`.github/radarsimlib-version`](.github/radarsimlib-version) — the
+`Windows_x86_64_GPU` and `Ubuntu24_x86_64_GPU` builds, which fall back to the
+CPU on the GPU-less runners — and publishes the library and `radarsim.h` as a
+build artifact. The Linux job stages `libradarsimc.so` as `radarsimc.so`, the name
 `loadlibrary` looks for, and strips the
 `__attribute__((visibility("default")))` from the header, which `loadlibrary`
 cannot parse. Both test jobs then stage that artifact into `src/+RadarSim`
@@ -109,8 +109,10 @@ the latest MATLAB release — and the integration tier both test the same
 installed package layout users get. JUnit results and Cobertura coverage are
 uploaded as build artifacts.
 
-The build job needs two repository secrets: `RADARSIMCPP` (deploy key for the
-`radarsimlib`/`radarsimcpp` submodules) and `TEST_LICENSE` (the RadarSimM
-license used for the licensed build). Neither is exposed to workflows
-triggered by pull requests from forks, so the whole workflow is skipped for
-those; pushes to a branch in this repository run it in full.
+The test jobs need the `TEST_LICENSE` repository secret (the RadarSimM license
+used for the licensed build). It is not exposed to workflows triggered by pull
+requests from forks, so the whole workflow is skipped for those; pushes to a
+branch in this repository run it in full.
+
+To move to a new radarsimlib release, update the tag in
+`.github/radarsimlib-version`. The release workflows read it too.

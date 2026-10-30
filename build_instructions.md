@@ -1,100 +1,77 @@
 # RadarSimM Build Instructions
 
-## Prerequisites for All Platforms
+RadarSimM is the MATLAB interface to `radarsimc`, the C library built in
+[`radarsimx/radarsimlib`](https://github.com/radarsimx/radarsimlib). RadarSimM
+does not compile it: a package is the MATLAB code in `src/` plus a prebuilt
+library from a
+[radarsimlib release](https://github.com/radarsimx/radarsimlib/releases).
 
-- CMake 3.20 or higher
-- C++ compiler with C++20 support
+The release used by the scripts and GitHub Actions workflows is pinned in
+[`.github/radarsimlib-version`](.github/radarsimlib-version).
 
 ## Project Structure
 
-The RadarSimM project is organized as follows:
-
 ```text
 radarsimm/
+├── .github/
+│   ├── radarsimlib-version               # Pinned radarsimlib release tag
+│   └── workflows/                        # CI and release workflows
 ├── assets/                               # Documentation assets and images
-├── examples/                             # MATLAB example scripts
-├── models/                               # 3D model files for simulation
-├── radarsimlib/                          # Core C++ library (submodule)
-│   ├── src/                              # C++ source code
-│   │   ├── includes/                     # C API header files
-│   │   │   └── radarsim.h                # Main C API header
-│   │   ├── radarsimcpp/                  # C++ source code
-│   │   │   ├── gtest/                    # Google Test framework
-│   │   │   ├── hdf5-lib-build/           # HDF5 library build files
-│   │   │   │   ├── hdf5/                 # HDF5 source code (HDF Group)
-│   │   │   │   ├── libs/                 # Platform-specific precompiled libraries
-│   │   │   │   │   ├── lib_linux_gcc11_x86_64/
-│   │   │   │   │   ├── lib_macos_arm64/
-│   │   │   │   │   ├── lib_macos_x86_64/
-│   │   │   │   │   └── lib_win_x86_64/
-│   │   │   │   ├── build.bat             # Windows build script
-│   │   │   │   ├── build.sh              # Linux/macOS build script
-│   │   │   │   └── README.md
-│   │   │   ├── includes/                 # Header files
-│   │   │   │   ├── libs/                 # Core library headers
-│   │   │   │   └── rsvector/             # Custom vector implementations
-│   │   │   ├── src/                      # C++/CUDA implementation files
-│   │   │   ├── CMakeLists.txt            # CMake configuration
-│   │   │   └── README.md
-│   │   └── radarsim.cpp                  # C API wrapper implementation
-│   ├── tests/                            # Unit tests
-│   └── CMakeLists.txt                    # CMake configuration
-├── src/                                  # MATLAB interface
-├── build_win.bat                         # Windows build script
+├── docs/                                 # Documentation site
+├── src/                                  # MATLAB interface (+RadarSim package, examples, models)
+├── tests/                                # Unit and integration tests
+├── build_win.bat                         # Windows packaging script
 ├── build_instructions.md                 # This file
 └── README.md                             # Project documentation
 ```
 
-## Windows (MSVC)
+## Release Builds
 
-1. Install required tools:
-   - [Microsoft Visual Studio 2022](https://visualstudio.microsoft.com/) with "Desktop development with C++" workload
-   - [CMake](https://cmake.org/download/) (Windows x64 Installer)
-   - [CUDA Toolkit 12](https://developer.nvidia.com/cuda-downloads) (Required only for GPU version)
+radarsimlib publishes GPU (CUDA) builds only. They use an NVIDIA GPU when one is
+available and fall back to the CPU otherwise, so the same package serves both
+kinds of machine.
 
-2. Build the project:
+| Platform | Release asset |
+|---|---|
+| Windows x86_64 | `radarsimlib_<tag>_Windows_x86_64_GPU.zip` |
+| Ubuntu 22.04 x86_64 | `radarsimlib_<tag>_Ubuntu22_x86_64_GPU.zip` |
+| Ubuntu 24.04 x86_64 | `radarsimlib_<tag>_Ubuntu24_x86_64_GPU.zip` |
+| Ubuntu 26.04 x86_64 | `radarsimlib_<tag>_Ubuntu26_x86_64_GPU.zip` |
 
-   ```batch
-   # For CPU version
-   build_win.bat --arch=cpu
-
-   # For GPU version (requires CUDA)
-   build_win.bat --arch=gpu
-   ```
-
-## Build Output
-
-The compiled module will be available in the `radarsimm_win_x86_64_cpu` or `radarsimm_win_x86_64_gpu` folder.
-
-## Build Options
-
-- `--arch`: Build architecture (`cpu` or `gpu`)
-- `--license`: Enable license verification (`on` or `off`)
-- `--deps`: Prebuilt dependency source (`repo` or `release`)
-
-## Prebuilt Dependency Source
-
-RadarSimCpp links third-party libraries (HDF5, and mbedTLS when license
-verification is enabled) as prebuilt static libraries. They are never compiled
-as part of a RadarSimM build; `--deps` only chooses where they are read from.
-
-| `--deps` | Where the libraries come from | Network needed |
-|---|---|---|
-| `repo` (default) | The committed `libs/` tree in the `radarsimx-deps` submodule, reached through `radarsimlib/src/radarsimcpp/deps` | No |
-| `release` | The checksum-pinned release archives published by [`radarsimx/radarsimx-deps`](https://github.com/radarsimx/radarsimx-deps), downloaded and cached under `radarsimlib/src/radarsimcpp/.deps-cache/` | Yes, on the first build |
+## Windows
 
 ```batch
-build_win.bat --deps=release
+REM Package the release pinned in .github\radarsimlib-version
+build_win.bat
+
+REM Or a specific release
+build_win.bat --version v15.6.0
 ```
 
-`build_win.bat` forwards the setting to `radarsimlib/build.bat`; on Linux, pass
-it to `radarsimlib/build.sh --deps=release` directly.
+The script downloads the release asset, extracts it, and assembles the package
+in `radarsimm_win_x86_64_gpu`: the contents of `src/` with `radarsimc.dll`,
+`radarsimc.lib` and `radarsim.h` in `+RadarSim`.
 
-`repo` is the default because it needs no network and pins the dependencies to
-the submodule commit, which makes it the right choice for local and offline
-builds. The GitHub Actions workflows all pass `--deps=release`, so CI links the
-same tagged, checksum-verified archives every time.
+## Linux
 
-## Troubleshooting
+Download the Ubuntu asset matching your system from the release, then:
 
-- If CMake fails to find CUDA, ensure CUDA_PATH environment variable is set correctly
+1. Copy the contents of `src/` into a new package directory.
+2. Copy `libradarsimc.so` into `+RadarSim` as `radarsimc.so` (MATLAB's
+   `loadlibrary` appends the extension to the name the package passes it).
+3. Copy `radarsim.h` into `+RadarSim` with the
+   `__attribute__((visibility("default")))` markers removed, which
+   `loadlibrary` cannot parse:
+
+   ```bash
+   sed 's/__attribute__((visibility("default")))//g' radarsim.h > <package>/+RadarSim/radarsim.h
+   ```
+
+The [`Build Linux Libraries`](.github/workflows/release-linux.yml) workflow does
+exactly this for every Ubuntu build in the release.
+
+## Building radarsimlib from source
+
+To build the library yourself, follow the instructions in the
+[radarsimlib repository](https://github.com/radarsimx/radarsimlib) and place
+the resulting library and `radarsim.h` in `src/+RadarSim` as described above.

@@ -3,6 +3,7 @@
 src/radarsim.h
 src/radarsimc.dll
 /radarsimm*
+/radarsimlib_release
 /.vscode
 *.lic
 src/+RadarSim/radarsim.h

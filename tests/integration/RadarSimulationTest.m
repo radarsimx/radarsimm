@@ -206,6 +206,20 @@ classdef RadarSimulationTest < matlab.unittest.TestCase
                 'Requesting noise must produce a non-zero noise matrix.');
         end
 
+        function noiseSeedMakesNoiseReproducible(testCase)
+            radar = testCase.buildRadar();
+            targets = {RadarSim.PointTarget([60, 0, 0], [0, 0, 0], 20)};
+
+            first = testCase.runSimulation(radar, targets, 'noise', true, 'noise_seed', 42);
+            second = testCase.runSimulation(radar, targets, 'noise', true, 'noise_seed', 42);
+            other = testCase.runSimulation(radar, targets, 'noise', true, 'noise_seed', 7);
+
+            testCase.verifyEqual(second.noise_, first.noise_, ...
+                'The same noise_seed must produce the same noise.');
+            testCase.verifyNotEqual(other.noise_, first.noise_, ...
+                'Different noise_seed values must produce different noise.');
+        end
+
         function noiseIsSkippedWhenNotRequested(testCase)
             radar = testCase.buildRadar();
             targets = {RadarSim.PointTarget([60, 0, 0], [0, 0, 0], 20)};

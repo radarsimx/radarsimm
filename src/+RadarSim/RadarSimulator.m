@@ -287,6 +287,7 @@ classdef RadarSimulator < handle
         %
         % Parameters:
         %   radar (RadarSim.Radar): The radar object.
+        %   seed (uint64): Random seed for noise generation, 0 for random (default: 0).
         %
         % Returns:
         %   noise_mat (double): The generated noise matrix.
@@ -315,9 +316,12 @@ classdef RadarSimulator < handle
             noise_real_ptr = libpointer("doublePtr", zeros(s1, s2, s3));
             noise_imag_ptr = libpointer("doublePtr", zeros(s1, s2, s3));
 
-            calllib('radarsimc', 'Run_NoiseSimulator', ...
+            status = calllib('radarsimc', 'Run_NoiseSimulator', ...
                 radar.radar_ptr, noise_amplitude_mixer, is_complex, ...
-                ts_ptr, s3, s2, s1, noise_real_ptr, noise_imag_ptr, uint64(0));
+                ts_ptr, s3, s2, s1, noise_real_ptr, noise_imag_ptr, seed);
+            if status ~= 0
+                error('RadarSim:NoiseSimulator', 'Noise simulation failed with error code %d', status);
+            end
 
             noise_mat = reshape(noise_real_ptr.Value + 1i * noise_imag_ptr.Value, s1, s2, s3);
         end

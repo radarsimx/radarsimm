@@ -98,11 +98,14 @@ jobs:
 
           for zip in "${zips[@]}"; do
               # radarsimlib_<tag>_Ubuntu24_x86_64_GPU.zip -> Ubuntu24_x86_64_GPU
-              label=$(basename "${zip}" .zip)
-              label="${label#radarsimlib_${RADARSIMLIB_VERSION}_}"
+              src_label=$(basename "${zip}" .zip)
+              src_label="${src_label#radarsimlib_${RADARSIMLIB_VERSION}_}"
+              # The package also serves CPU-only machines, so it is published
+              # as Ubuntu24_x86_64_CPU_GPU.
+              label="${src_label%_GPU}_CPU_GPU"
               echo "::group::${label}"
 
-              unpacked="radarsimlib-release/unpacked/${label}"
+              unpacked="radarsimlib-release/unpacked/${src_label}"
               mkdir -p "${unpacked}"
               unzip -q "${zip}" -d "${unpacked}"
 
@@ -142,16 +145,16 @@ jobs:
           cat > "${root}/README.md" << 'EOF'
           # RadarSimM Linux Build Artifacts
 
-          This archive contains RadarSimM packages for Linux with license
-          verification enabled, one per Ubuntu LTS release.
+          RadarSimM packages for Linux with license verification enabled,
+          one zip per Ubuntu LTS release.
 
           ## Directory Structure
 
-          Each directory holds a complete RadarSimM package (examples, models,
-          and the +RadarSim package):
+          Each zip holds this README and a complete RadarSimM package
+          (examples, models, and the +RadarSim package):
 
           ```
-          Ubuntu<version>_x86_64_GPU/
+          Ubuntu<version>_x86_64_CPU_GPU/
           ├── +RadarSim/
           │   ├── radarsimc.so
           │   └── radarsim.h
@@ -174,8 +177,8 @@ jobs:
 
           ## Usage
 
-          1. Choose the directory matching your Ubuntu release (or the closest
-             older one for other distributions)
+          1. Choose the zip matching your Ubuntu release (or the closest
+             older one for other distributions) and extract it
           2. Add the package directory to the MATLAB path
           3. Place valid `license_RadarSimM_*.lic` file(s) in the `+RadarSim` directory
 
@@ -210,23 +213,27 @@ jobs:
             echo "Packaged from radarsimlib ${RADARSIMLIB_VERSION} at $(date -u +"%Y-%m-%d %H:%M:%S UTC")."
           } >> "${root}/README.md"
 
-      - name: Create compressed archive
+      - name: Create one zip per package
         run: |
-          cd packed
-          tar -czf radarsimm_linux_all_builds.tar.gz radarsimm_linux_all/
-          zip -qr radarsimm_linux_all_builds.zip radarsimm_linux_all/
+          set -euo pipefail
+          root='packed/radarsimm_linux_all'
+          mkdir -p packed/zips
+
+          for d in "${root}"/*/; do
+              label=$(basename "${d}")
+              # Each zip holds the package directory and the README.
+              (cd "${root}" && zip -qr "../zips/radarsimm_${label}.zip" "${label}" README.md)
+          done
 
           echo "::group::Archive Information"
-          ls -lh *.tar.gz *.zip
+          ls -lh packed/zips
           echo "::endgroup::"
 
       - name: Upload packed artifacts
         uses: actions/upload-artifact@v7
         with:
           name: radarsimm_linux_all_builds
-          path: |
-            packed/radarsimm_linux_all_builds.tar.gz
-            packed/radarsimm_linux_all_builds.zip
+          path: packed/zips/*.zip
           retention-days: 1
           compression-level: 0
 

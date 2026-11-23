@@ -12,7 +12,7 @@ name: Build Windows Libraries
 # machines.
 #
 # Outputs:
-# - Packed archive (tar.gz and zip) containing the package
+# - radarsimm_Windows_x86_64_CPU_GPU.zip: the package and a README
 #
 # Triggers:
 # - Tag pushes (release events)
@@ -74,7 +74,7 @@ jobs:
           retention-days: 1
           compression-level: 6
 
-  # Pack the package with a README into a single archive
+  # Pack the package with a README into its own zip
   pack-artifacts:
     needs: build
     runs-on: ubuntu-latest
@@ -97,7 +97,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: radarsimm_win_x86_64_gpu
-          path: packed/radarsimm_windows_all/Windows_x86_64_GPU
+          path: packed/radarsimm_windows_all/Windows_x86_64_CPU_GPU
 
       - name: Delete downloaded artifact
         uses: geekyeggo/delete-artifact@v6
@@ -116,13 +116,12 @@ jobs:
           cat > packed/radarsimm_windows_all/README.md << 'EOF'
           # RadarSimM Windows Build Artifacts
 
-          This archive contains the RadarSimM package for Windows with license
-          verification enabled.
+          The RadarSimM package for Windows with license verification enabled.
 
           ## Directory Structure
 
           ```
-          Windows_x86_64_GPU/
+          Windows_x86_64_CPU_GPU/
           ├── +RadarSim/
           │   ├── radarsimc.dll
           │   ├── radarsimc.lib
@@ -139,7 +138,7 @@ jobs:
 
           ## Usage
 
-          1. Add the `Windows_x86_64_GPU` directory to the MATLAB path
+          1. Add the `Windows_x86_64_CPU_GPU` directory to the MATLAB path
           2. Place valid `license_RadarSimM_*.lic` file(s) in the `+RadarSim` directory
 
           ## License Activation
@@ -166,23 +165,27 @@ jobs:
             echo "Packaged from radarsimlib ${RADARSIMLIB_VERSION} at $(date -u +"%Y-%m-%d %H:%M:%S UTC")."
           } >> packed/radarsimm_windows_all/README.md
 
-      - name: Create compressed archive
+      - name: Create one zip per package
         run: |
-          cd packed
-          tar -czf radarsimm_windows_all_builds.tar.gz radarsimm_windows_all/
-          zip -qr radarsimm_windows_all_builds.zip radarsimm_windows_all/
+          set -euo pipefail
+          root='packed/radarsimm_windows_all'
+          mkdir -p packed/zips
+
+          for d in "${root}"/*/; do
+              label=$(basename "${d}")
+              # Each zip holds the package directory and the README.
+              (cd "${root}" && zip -qr "../zips/radarsimm_${label}.zip" "${label}" README.md)
+          done
 
           echo "::group::Archive Information"
-          ls -lh *.tar.gz *.zip
+          ls -lh packed/zips
           echo "::endgroup::"
 
       - name: Upload packed artifacts
         uses: actions/upload-artifact@v7
         with:
           name: radarsimm_windows_all_builds
-          path: |
-            packed/radarsimm_windows_all_builds.tar.gz
-            packed/radarsimm_windows_all_builds.zip
+          path: packed/zips/*.zip
           retention-days: 1
           compression-level: 0
 
@@ -195,6 +198,6 @@ jobs:
             echo "| Property | Value |"
             echo "|----------|-------|"
             echo "| radarsimlib | \`${RADARSIMLIB_VERSION:-unknown}\` |"
-            echo "| Package | \`Windows_x86_64_GPU\` |"
+            echo "| Package | \`Windows_x86_64_CPU_GPU\` |"
             echo "| Status | ${{ job.status }} |"
           } >> "$GITHUB_STEP_SUMMARY"
